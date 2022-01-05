@@ -50,18 +50,18 @@ set(TEST_DATA_PATH "${REFDATA}/jalousie/2019_07")
 if(EXISTS ${TEST_DATA_PATH})
 
   #
-  set(JalBuilderReadoutsTest_INC ${JAL_BASE_DIR}/BuilderReadouts.h ${JAL_BASE_DIR}/Readout.h
-  ${JAL_BASE_DIR}/generators/CdtFile.h)
-  set(JalBuilderReadoutsTest_SRC
-    BuilderReadoutsTest.cpp
-    ${JAL_BASE_DIR}/BuilderReadouts.cpp
-    ${JAL_BASE_DIR}/Readout.cpp
-    ${JAL_BASE_DIR}/generators/CdtFile.cpp
-    )
-    create_test_executable(JalBuilderReadoutsTest)
-    target_compile_definitions(JalBuilderReadoutsTest
-      PRIVATE TEST_DATA_PATH="${TEST_DATA_PATH}/")
-
+  #set(JalBuilderReadoutsTest_INC ${JAL_BASE_DIR}/BuilderReadouts.h ${JAL_BASE_DIR}/Readout.h
+  #${JAL_BASE_DIR}/generators/CdtFile.h)
+  #set(JalBuilderReadoutsTest_SRC
+  #  BuilderReadoutsTest.cpp
+  #  ${JAL_BASE_DIR}/BuilderReadouts.cpp
+  #  ${JAL_BASE_DIR}/Readout.cpp
+  #  ${JAL_BASE_DIR}/generators/CdtFile.cpp
+  #  )
+  #  create_test_executable(JalBuilderReadoutsTest)
+  #  target_compile_definitions(JalBuilderReadoutsTest
+  #    PRIVATE TEST_DATA_PATH="${TEST_DATA_PATH}/")
+  #
   #
   set(JalSumoMappingsTest_INC ${JAL_BASE_DIR}/SumoMappings.h)
   set(JalSumoMappingsTest_SRC SumoMappingsTest.cpp ${JAL_BASE_DIR}/SumoMappings.cpp)

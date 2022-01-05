@@ -2,15 +2,15 @@
 # NMX Readout generator (h5)
 #=============================================================================
 
-set(nmxgen_readouts_SRC
-  ${ESS_SOURCE_DIR}/generators/udpgen_hits/generator.cpp
-  ReaderReadouts.cpp
-  )
-set(nmxgen_readouts_INC
-  ReaderReadouts.h
-  )
-create_executable(nmxgen_readouts)
-target_compile_definitions(nmxgen_readouts PUBLIC GENERATOR_GDGEM_READOUTS)
+#set(nmxgen_readouts_SRC
+#  ${ESS_SOURCE_DIR}/generators/udpgen_hits/generator.cpp
+#  ReaderReadouts.cpp
+#  )
+#set(nmxgen_readouts_INC
+#  ReaderReadouts.h
+#  )
+#create_executable(nmxgen_readouts)
+#target_compile_definitions(nmxgen_readouts PUBLIC GENERATOR_GDGEM_READOUTS)
 
 
 #

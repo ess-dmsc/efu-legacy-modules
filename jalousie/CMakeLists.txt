@@ -1,5 +1,4 @@
 
-add_subdirectory(generators)
 add_subdirectory(test)
 
 include_directories(.)
