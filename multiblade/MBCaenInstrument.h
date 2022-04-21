@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include <caen/MBGeometry.h>
+#include <caen/AMORGeometry.h>
 #include <clustering/EventBuilder.h>
 #include <common/kafka/EV42Serializer.h>
 #include <common/kafka/Producer.h>
@@ -28,18 +28,23 @@ namespace Multiblade {
 class MBCaenInstrument {
 public:
 
-  /// \brief 'create' the Multiblade instrument
-  ///
-  MBCaenInstrument(Counters & counters, BaseSettings & EFUSettings, CAENSettings & moduleSettings);
+/// \brief 'create' the Multiblade instrument
+///
+MBCaenInstrument(Counters & counters, BaseSettings & EFUSettings, CAENSettings & moduleSettings);
 
-  ///
+///
 bool parsePacket(char * data, int length, EV42Serializer & ev42ser);
 
-  ///
-  void ingestOneReadout(int cassette, const Readout & dp);
+///
+void ingestOneReadout(int cassette, const Readout & dp);
 
-  ///
+///
 bool filterEvent(const Event & e);
+
+/// \brief map from digital identifiers to Cassette number according
+/// to the ICD. The bahaviour depends on whether we operate in
+/// 2D (VMM readout) or 1D (Amor plan B, Caen)
+int getCassette(int DigitizerIndex, uint8_t Channel);
 
 
 // Two methods below from ref data test
@@ -64,7 +69,7 @@ public:
 
   HistogramSerializer histfb{1, "multiblade"}; // reinit in ctor
   Hists histograms{1, 1}; // reinit in ctor
-  MBGeometry mbgeom{1, 1, 1}; // reinit in ctor
+  AMORGeometry amorgeom; // reinit in ctor
   std::vector<EventBuilder> builders; // reinit in ctor
 
   DataParser parser;

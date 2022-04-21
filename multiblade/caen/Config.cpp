@@ -82,9 +82,11 @@ void Config::loadConfigFile() {
       return;
     }
 
+    Mixed1D2DMode = root["Mixed1D2DMode"].get<bool>();
     NCass = root["cassettes"].get<unsigned int>();
     NWires  = root["wires"].get<unsigned int>();
     NStrips = root["strips"].get<unsigned int>();
+
 
     if ((NWires == 0) or (NStrips == 0) or (NCass == 0)) {
       LOG(INIT, Sev::Warning, "JSON config - error: invalid geometry");
@@ -98,6 +100,11 @@ void Config::loadConfigFile() {
       digit.digid = digitiser["id"].get<unsigned int>();
       Digitisers.push_back(digit);
       LOG(INIT, Sev::Info, "JSON config - Digitiser {}, offset {}", digit.digid, digit.index);
+    }
+
+    if (Mixed1D2DMode) {
+      NCass = Digitisers.size() * 2 - 1;
+      printf("Mixed1D2DMode: %zu digitizers -> %u cassettes\n", Digitisers.size(), NCass);
     }
 
     TimeTickNS = root["TimeTickNS"].get<uint32_t>();

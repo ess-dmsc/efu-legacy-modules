@@ -33,8 +33,11 @@ struct Counters {
     int64_t ReadoutsInvalidPlane;
     int64_t ReadoutsTimerWraps;
     int64_t ProcessingIdle;
+    int64_t Readouts2D;
+    int64_t Readouts1D;
     int64_t Events;
-    int64_t EventsUdder;
+    int64_t Events2D;
+    int64_t Events1D;
     int64_t EventsNoCoincidence;
     int64_t EventsMatchedClusters;
     int64_t EventsInvalidStripGap;

@@ -60,6 +60,9 @@ public:
   /// Specify the digital geometry
   std::shared_ptr<DigitizerMapping> Mappings;
 
+  // New entry for mixed mode
+  bool Mixed1D2DMode{false};
+
 private:
   /// \brief helper function to load and parse json file
   void loadConfigFile();

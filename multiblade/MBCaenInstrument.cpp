@@ -1,4 +1,4 @@
-// Copyright (C) 2020 European Spallation Source, ERIC. See LICENSE file
+// Copyright (C) 2020 - 2022 European Spallation Source, ERIC. See LICENSE file
 //===----------------------------------------------------------------------===//
 ///
 /// \file
@@ -14,9 +14,6 @@
 
 // #undef TRC_LEVEL
 // #define TRC_LEVEL TRC_L_DEB
-
-// Old PSI data (ESS mask) uses monitor channels
-#define MB_MONITOR_CHANNEL
 
 namespace Multiblade {
 
@@ -35,33 +32,10 @@ MBCaenInstrument::MBCaenInstrument(struct Counters & counters,
       dumpfile = ReadoutFile::create(moduleSettings.FilePrefix + "-" + timeString());
     }
 
+    ncass = 11;
 
-    ncass = MultibladeConfig.getCassettes();
-    nwires = MultibladeConfig.getWires();
-    nstrips = MultibladeConfig.getStrips();
-    mbgeom = MBGeometry(ncass, nwires, nstrips);
-
-    if (MultibladeConfig.getInstrument() == Config::InstrumentGeometry::Estia) {
-      XTRACE(PROCESS, ALW, "Setting instrument configuration to Estia");
-      mbgeom.setConfigurationEstia();
-      essgeom = ESSGeometry(ncass * nwires, nstrips, 1, 1);
-      topic = "estia_detector";
-      monitor = "estia_monitor";
-    } else {
-      mbgeom.setConfigurationFreia();
-      XTRACE(PROCESS, ALW, "Setting instrument configuration to Freia");
-      essgeom = ESSGeometry(nstrips, ncass * nwires, 1, 1);
-      topic = "freia_detector";
-      monitor = "freia_monitor";
-    }
-
-    if (MultibladeConfig.getDetectorType() == Config::DetectorType::MB18) {
-      XTRACE(PROCESS, ALW, "Setting detector to MB18");
-      mbgeom.setDetectorMB18();
-    } else {
-      XTRACE(PROCESS, ALW, "Setting detector to MB16");
-      mbgeom.setDetectorMB16();
-    }
+    essgeom = ESSGeometry(32, 352, 1, 1);
+    topic = "amor_detector";
 
     builders = std::vector<EventBuilder>(ncass);
     for (EventBuilder & builder : builders) {
@@ -77,8 +51,6 @@ MBCaenInstrument::MBCaenInstrument(struct Counters & counters,
     histfb.set_callback(ProduceHist);
     histograms = Hists(std::max(ncass * nwires, ncass * nstrips), 65535);
     histfb = HistogramSerializer(histograms.needed_buffer_size(), "multiblade");
-    //
-
 }
 
 
@@ -107,17 +79,37 @@ bool MBCaenInstrument::parsePacket(char * data, int length,  EV42Serializer & ev
     dumpfile->push(parser.readouts);
   }
 
-  auto cassette = MultibladeConfig.Mappings->cassette(parser.MBHeader->digitizerID);
-  if (cassette < 0) {
+  int DigitiserIndex = MultibladeConfig.Mappings->digitiserIndex(parser.MBHeader->digitizerID);
+  if (DigitiserIndex < 0) {
     XTRACE(DATA, WAR, "Invalid digitizerId: %d", parser.MBHeader->digitizerID);
     counters.PacketBadDigitizer++;
     return false;
   }
 
-  FixJumpsAndSort(cassette, parser.readouts);
-  builders[cassette].flush();
+  FixJumpsAndSort(DigitiserIndex, parser.readouts);
+
+  for (int cassette = 0; cassette <= 10; cassette++) {
+    builders[cassette].flush();
+  }
 
   return true;
+}
+
+
+int MBCaenInstrument::getCassette(int DigitiserIndex, uint8_t Channel) {
+  if (not MultibladeConfig.Mixed1D2DMode) {
+    return DigitiserIndex;
+  }
+
+  if (DigitiserIndex == 5) {
+    return 10;
+  }
+
+  if (Channel > 31) {
+    return DigitiserIndex * 2;
+  } else {
+    return DigitiserIndex * 2 + 1;
+  }
 }
 
 
@@ -128,11 +120,13 @@ bool compareByTime(const Readout &a, const Readout &b) {
 
 // New EF algorithm - buffers data according to time and sorts before
 // processing
-void MBCaenInstrument::FixJumpsAndSort(int cassette, std::vector<Readout> &vec) {
+void MBCaenInstrument::FixJumpsAndSort(int DigitiserIndex, std::vector<Readout> &vec) {
   int64_t Gap{43'000'000};
   int64_t PrevTime{0xffffffffff};
   std::vector<Readout> temp;
 
+  // Assume time gap detectino and data sorting can be done
+  // per digitizer and not per cassette.
   for (auto &Readout : vec) {
     int64_t Time = (uint64_t)(Readout.local_time * MultibladeConfig.TimeTickNS);
 
@@ -143,20 +137,25 @@ void MBCaenInstrument::FixJumpsAndSort(int cassette, std::vector<Readout> &vec) 
              counters.ReadoutsTimerWraps, Time, PrevTime, (PrevTime - Time));
       counters.ReadoutsTimerWraps++;
       std::sort(temp.begin(), temp.end(), compareByTime);
-      LoadAndProcessReadouts(cassette, temp);
+      LoadAndProcessReadouts(DigitiserIndex, temp);
 
       temp.clear();
       temp.push_back(Readout);
     }
     PrevTime = Time;
   }
-  LoadAndProcessReadouts(cassette, temp);
+  LoadAndProcessReadouts(DigitiserIndex, temp);
 }
 
-//
-void MBCaenInstrument::LoadAndProcessReadouts(int cassette, std::vector<Readout> &vec) {
+// Here readouts from the same digitizer can end up in different
+// builders - one per cassette
+void MBCaenInstrument::LoadAndProcessReadouts(int DigitiserIndex, std::vector<Readout> &vec) {
   for (auto &dp : vec) {
-    if (not mbgeom.isValidCh(dp.channel)) {
+    int Cassette = getCassette(DigitiserIndex, dp.channel);
+    assert(Cassette <= 10);
+    assert(Cassette >= 0);
+
+    if (not amorgeom.isValidChannel(dp.channel)) {
       counters.ReadoutsInvalidChannel++;
       continue;
     }
@@ -166,25 +165,20 @@ void MBCaenInstrument::LoadAndProcessReadouts(int cassette, std::vector<Readout>
       continue;
     }
 
-    uint8_t plane = mbgeom.getPlane(dp.channel);
+    uint8_t plane = amorgeom.getPlane(Cassette, dp.channel);
 
-    #ifdef MB_MONITOR_CHANNEL
-    #define MONITOR_DIGITIZER 137
-    #define MONITOR_CHANNEL 62
-    #define MONITOR_PLANE 0
-    if ((dp.digitizer == MONITOR_DIGITIZER) and
-        (dp.channel == MONITOR_CHANNEL) and
-        (plane == MONITOR_PLANE)) {
+    if (amorgeom.isMonitor(Cassette, dp.channel)) {
       counters.ReadoutsMonitor++;
-      continue;
     }
-    #endif
 
-    uint16_t coord;
+    int coord;
     if (plane == 0) {
-      coord = mbgeom.getx(cassette, dp.channel);
+      coord = amorgeom.getXCoord(Cassette, dp.channel);
+      //printf("Cassette %d, Channel: %u - x-coord %d\n", Cassette, dp.channel, coord);
     } else  if (plane == 1) {
-      coord = mbgeom.gety(cassette, dp.channel);
+      coord = amorgeom.getYCoord(Cassette, dp.channel);
+      //printf("Cassette %d, Channel: %u - y-coord %d\n", Cassette, dp.channel, coord);
+      assert(coord < 352);
     } else {
       counters.ReadoutsInvalidPlane++;
       continue;
@@ -192,17 +186,25 @@ void MBCaenInstrument::LoadAndProcessReadouts(int cassette, std::vector<Readout>
 
     counters.ReadoutsGood++;
 
+    if (amorgeom.is1DDetector(Cassette)) {
+      counters.Readouts1D++;
+    } else {
+      counters.Readouts2D++;
+    }
+
     XTRACE(DATA, DEB, "time %u, channel %u, adc %u",
            dp.local_time, dp.channel, dp.adc);
     XTRACE(DATA, DEB, "Readout (%s) -> cassette=%d plane=%d coord=%d",
-           dp.debug().c_str(), cassette, plane, coord);
+           dp.debug().c_str(), Cassette, plane, (uint16_t)coord);
 
     assert(dp.local_time * MultibladeConfig.TimeTickNS < 0xffffffff);
     uint64_t Time = (uint64_t)(dp.local_time * MultibladeConfig.TimeTickNS);
 
-    builders[cassette].insert({Time, coord, dp.adc, plane});
+    builders[Cassette].insert({Time, (uint16_t)coord, dp.adc, plane});
   }
-  builders[cassette].flush();
+  for (auto & builder : builders) {
+    builder.flush();
+  }
 }
 
 

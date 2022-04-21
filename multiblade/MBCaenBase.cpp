@@ -14,7 +14,6 @@
 #include <common/kafka/Producer.h>
 #include <common/debug/Trace.h>
 #include <common/time/TimeString.h>
-#include <common/TestImageUdder.h>
 
 #include <unistd.h>
 
@@ -50,6 +49,8 @@ CAENBase::CAENBase(BaseSettings const &settings, struct CAENSettings &LocalMBCAE
 
   Stats.create("receive.packet_bad_header", Counters.PacketBadDigitizer);
   Stats.create("readouts.count", Counters.ReadoutsCount);
+  Stats.create("readouts.count1D", Counters.Readouts1D);
+  Stats.create("readouts.count2D", Counters.Readouts2D);
   Stats.create("readouts.count_valid", Counters.ReadoutsGood);
   Stats.create("readouts.invalid_ch", Counters.ReadoutsInvalidChannel);
   Stats.create("readouts.invalid_adc", Counters.ReadoutsInvalidAdc);
@@ -64,6 +65,8 @@ CAENBase::CAENBase(BaseSettings const &settings, struct CAENSettings &LocalMBCAE
   Stats.create("thread.processing_idle", Counters.ProcessingIdle);
 
   Stats.create("events.count", Counters.Events);
+  Stats.create("events.2D", Counters.Events2D);
+  Stats.create("events.1D", Counters.Events1D);
   Stats.create("events.geometry_errors", Counters.GeometryErrors);
   Stats.create("events.no_coincidence", Counters.EventsNoCoincidence);
   Stats.create("events.matched_clusters", Counters.EventsMatchedClusters);
@@ -176,60 +179,86 @@ void CAENBase::processing_thread() {
       uint64_t efu_time = 1000000000LU * (uint64_t)time(NULL); // ns since 1970
       flatbuffer.pulseTime(efu_time);
 
+      // \todo state some assumptions here
       if (not MBCaen.parsePacket(dataptr, datalen, flatbuffer)) {
         continue;
       }
 
-      auto cassette = MBCaen.MultibladeConfig.Mappings->cassette(MBCaen.parser.MBHeader->digitizerID);
-      for (const auto &e : MBCaen.builders[cassette].Events) {
+      for (int Cassette = 0; Cassette <= MBCaen.amorgeom.Cassette2D; Cassette++) {
+        for (const auto &e : MBCaen.builders[Cassette].Events) {
 
-        if (!e.both_planes()) {
-          Counters.EventsNoCoincidence++;
-          continue;
-        }
-
-        bool DiscardGap{true};
-        // Discard if there are gaps in the strip channels
-        if (DiscardGap) {
-          if (e.ClusterB.hits.size() < e.ClusterB.coord_span()) {
-            Counters.EventsInvalidStripGap++;
+          // 2D events must have coincidences for both planes, but not 1D
+          if (!MBCaen.amorgeom.is1DDetector(Cassette) && !e.both_planes()) {
+            Counters.EventsNoCoincidence++;
             continue;
           }
-        }
 
-        // Discard if there are gaps in the wire channels
-        if (DiscardGap) {
-          if (e.ClusterA.hits.size() < e.ClusterA.coord_span()) {
-            Counters.EventsInvalidWireGap++;
-            continue;
+          bool DiscardGap{true};
+          // Discard if there are gaps in the strip channels
+          if (DiscardGap) {
+            if (e.ClusterA.hits.size() < e.ClusterA.coord_span()) {
+              Counters.EventsInvalidStripGap++;
+              continue;
+            }
+          }
+
+          // Discard if there are gaps in the wire channels
+          if (DiscardGap) {
+            if (e.ClusterB.hits.size() < e.ClusterB.coord_span()) {
+              Counters.EventsInvalidWireGap++;
+              continue;
+            }
+          }
+
+          // if (MBCaen.amorgeom.is1DDetector(Cassette)) {
+          //   auto a = e.ClusterB.hits.size();
+          //   if (a != 0) {
+          //     printf("Hits in wire cluster %zu\n", a);
+          //   }
+          // }
+
+          Counters.EventsMatchedClusters++;
+
+          XTRACE(EVENT, INF, "Event Valid\n %s", e.to_string({}, true).c_str());
+          // calculate local x and y using center of mass
+          uint16_t x{0};
+          uint16_t y{0};
+          if (!MBCaen.amorgeom.is1DDetector(Cassette)) {
+            x = static_cast<uint16_t>(std::round(e.ClusterA.coord_center()));
+            y = static_cast<uint16_t>(std::round(e.ClusterB.coord_center()));
+          } else {
+            x = 0;
+            y = static_cast<uint16_t>(std::round(e.ClusterB.coord_center()));
+          }
+
+          // Calculate event (t, pix)
+          auto time = e.time_start();
+          auto pixel_id = MBCaen.essgeom.pixel2D(x, y);
+          XTRACE(EVENT, DEB, "time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
+
+          if (pixel_id == 0) {
+            XTRACE(EVENT, DEB, "pixel error: time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
+            Counters.GeometryErrors++;
+          } else {
+            Counters.TxBytes += flatbuffer.addEvent(time, pixel_id);
+            Counters.Events++;
+            if (MBCaen.amorgeom.is1DDetector(Cassette)) {
+              Counters.Events1D++;
+            } else {
+              Counters.Events2D++;
+            }
           }
         }
+        MBCaen.builders[Cassette].Events.clear(); // else events will accumulate
+      } // interate over builders
 
-        Counters.EventsMatchedClusters++;
-
-        XTRACE(EVENT, INF, "Event Valid\n %s", e.to_string({}, true).c_str());
-        // calculate local x and y using center of mass
-        auto x = static_cast<uint16_t>(std::round(e.ClusterA.coord_center()));
-        auto y = static_cast<uint16_t>(std::round(e.ClusterB.coord_center()));
-
-        // \todo improve this
-        auto time = e.time_start();
-        auto pixel_id = MBCaen.essgeom.pixel2D(x, y);
-        XTRACE(EVENT, DEB, "time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
-
-        if (pixel_id == 0) {
-          Counters.GeometryErrors++;
-        } else {
-          Counters.TxBytes += flatbuffer.addEvent(time, pixel_id);
-          Counters.Events++;
-        }
-      }
-      MBCaen.builders[cassette].Events.clear(); // else events will accumulate
     } else {
       // There is NO data in the FIFO - do stop checks and sleep a little
       Counters.ProcessingIdle++;
       usleep(10);
     }
+
+
 
     // if filedumping and requesting time splitting, check for rotation.
     if (MBCAENSettings.H5SplitTime != 0 and (MBCaen.dumpfile)) {

@@ -24,7 +24,7 @@ public:
   DigitizerMapping(std::vector<struct DigitizerMapping::Digitiser> & digitisers) : Digitisers(digitisers) { };
 
   /// \brief mapping between digitiser ids (serial numbers) and physical order
-  inline int cassette(int digid) {
+  inline int digitiserIndex(int digid) {
     for (auto & digi : Digitisers) {
       if (digi.digid == digid) {
         return digi.index;
