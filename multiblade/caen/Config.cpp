@@ -91,6 +91,7 @@ void Config::loadConfigFile() {
     MaxValidADC = root["MaxValidADC"].get<int>();
 
     TimeTickNS = root["TimeTickNS"].get<uint32_t>();
+    MaxTofNS = root["MaxTofNS"].get<uint32_t>();
     assert(TimeTickNS != 0);
   }
   catch (...) {

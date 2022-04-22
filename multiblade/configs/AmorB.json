@@ -23,5 +23,6 @@
   "MaxGapStrip" : 32,
   "MaxValidADC" : 65535,
 
-  "TimeTickNS": 16
+  "TimeTickNS" : 16,
+  "MaxTofNS" : 1100000000
 }

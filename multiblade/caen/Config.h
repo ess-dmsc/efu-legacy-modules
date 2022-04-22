@@ -65,6 +65,7 @@ public:
 
   int MaxGapWire{0};
   int MaxGapStrip{1};
+  uint32_t MaxTofNS{1'000'000'000}; // 1s
 
 private:
   /// \brief helper function to load and parse json file

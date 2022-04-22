@@ -72,6 +72,7 @@ CAENBase::CAENBase(BaseSettings const &settings, struct CAENSettings &LocalMBCAE
   Stats.create("events.matched_clusters", Counters.EventsMatchedClusters);
   Stats.create("events.strip_gaps", Counters.EventsInvalidStripGap);
   Stats.create("events.wire_gaps", Counters.EventsInvalidWireGap);
+  Stats.create("events.max_tof_ns", Counters.EventsMaxTofNS);
 
   Stats.create("transmit.bytes", Counters.TxBytes);
 
@@ -231,7 +232,10 @@ void CAENBase::processing_thread() {
           }
 
           // Calculate event (t, pix)
-          auto time = e.time_start();
+          uint64_t time = e.time_start();
+          if (time > MBCaen.config.MaxTofNS) {
+            Counters.EventsMaxTofNS++;
+          }
           auto pixel_id = MBCaen.essgeom.pixel2D(x, y);
           XTRACE(EVENT, DEB, "time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
 
