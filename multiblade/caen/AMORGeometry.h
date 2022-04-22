@@ -19,6 +19,7 @@
 class AMORGeometry {
 public:
   const int MonitorChannel{63};
+  const int MonitorCassette{0};
   const int Cassette2D{10};
 
 
@@ -31,7 +32,7 @@ public:
   }
 
   bool isMonitor(int Cassette, uint16_t Channel) {
-    return ((Cassette == Cassette2D) and (Channel == MonitorChannel));
+    return ((Cassette == MonitorCassette) and (Channel == MonitorChannel));
   }
 
   bool isXCoord(int Cassette, uint16_t Channel) {

@@ -165,6 +165,7 @@ void CAENBase::processing_thread() {
   // Monitor these counters
   RuntimeStat RtStat({Counters.RxPackets, Counters.Events, Counters.TxBytes});
 
+
   while (true) {
     if (InputFifo.pop(data_index)) { // There is data in the FIFO - do processing
       auto datalen = RxRingbuffer.getDataLength(data_index);
@@ -184,6 +185,8 @@ void CAENBase::processing_thread() {
         continue;
       }
 
+      // Strips == X == ClusterA
+      // Wires  == Y == ClusterB
       for (int Cassette = 0; Cassette <= MBCaen.amorgeom.Cassette2D; Cassette++) {
         for (const auto &e : MBCaen.builders[Cassette].Events) {
 
@@ -193,29 +196,25 @@ void CAENBase::processing_thread() {
             continue;
           }
 
-          bool DiscardGap{true};
+#if 1
           // Discard if there are gaps in the strip channels
-          if (DiscardGap) {
-            if (e.ClusterA.hits.size() < e.ClusterA.coord_span()) {
+          if (e.ClusterA.hits.size() < e.ClusterA.coord_span()) {
+            int StripGap = e.ClusterA.coord_span() - e.ClusterA.hits.size();
+            if (StripGap >= MBCaen.config.MaxGapStrip) {
               Counters.EventsInvalidStripGap++;
               continue;
             }
           }
 
           // Discard if there are gaps in the wire channels
-          if (DiscardGap) {
-            if (e.ClusterB.hits.size() < e.ClusterB.coord_span()) {
+          if (e.ClusterB.hits.size() < e.ClusterB.coord_span()) {
+            int WireGap = e.ClusterB.coord_span() - e.ClusterB.hits.size();
+            if (WireGap >= MBCaen.config.MaxGapWire) {
               Counters.EventsInvalidWireGap++;
               continue;
             }
           }
-
-          // if (MBCaen.amorgeom.is1DDetector(Cassette)) {
-          //   auto a = e.ClusterB.hits.size();
-          //   if (a != 0) {
-          //     printf("Hits in wire cluster %zu\n", a);
-          //   }
-          // }
+#endif
 
           Counters.EventsMatchedClusters++;
 

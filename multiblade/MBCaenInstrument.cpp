@@ -26,7 +26,7 @@ MBCaenInstrument::MBCaenInstrument(struct Counters & counters,
 
 
     // Setup Instrument according to configuration file
-    MultibladeConfig = Config(ModuleSettings.ConfigFile);
+    config = Config(ModuleSettings.ConfigFile);
 
     if (!moduleSettings.FilePrefix.empty()) {
       dumpfile = ReadoutFile::create(moduleSettings.FilePrefix + "-" + timeString());
@@ -79,7 +79,7 @@ bool MBCaenInstrument::parsePacket(char * data, int length,  EV42Serializer & ev
     dumpfile->push(parser.readouts);
   }
 
-  int DigitiserIndex = MultibladeConfig.Mappings->digitiserIndex(parser.MBHeader->digitizerID);
+  int DigitiserIndex = config.Mappings->digitiserIndex(parser.MBHeader->digitizerID);
   if (DigitiserIndex < 0) {
     XTRACE(DATA, WAR, "Invalid digitizerId: %d", parser.MBHeader->digitizerID);
     counters.PacketBadDigitizer++;
@@ -97,10 +97,6 @@ bool MBCaenInstrument::parsePacket(char * data, int length,  EV42Serializer & ev
 
 
 int MBCaenInstrument::getCassette(int DigitiserIndex, uint8_t Channel) {
-  if (not MultibladeConfig.Mixed1D2DMode) {
-    return DigitiserIndex;
-  }
-
   if (DigitiserIndex == 5) {
     return 10;
   }
@@ -128,7 +124,7 @@ void MBCaenInstrument::FixJumpsAndSort(int DigitiserIndex, std::vector<Readout> 
   // Assume time gap detectino and data sorting can be done
   // per digitizer and not per cassette.
   for (auto &Readout : vec) {
-    int64_t Time = (uint64_t)(Readout.local_time * MultibladeConfig.TimeTickNS);
+    int64_t Time = (uint64_t)(Readout.local_time * config.TimeTickNS);
 
     if ((PrevTime - Time) < Gap) {
       temp.push_back(Readout);
@@ -160,7 +156,9 @@ void MBCaenInstrument::LoadAndProcessReadouts(int DigitiserIndex, std::vector<Re
       continue;
     }
 
-    if (dp.adc > MultibladeConfig.max_valid_adc) {
+    if (dp.adc > config.MaxValidADC) {
+      XTRACE(DATA, INF, "Bad ADC: DigitiserIndex %u, Cassette %2u, Channel %2u, ADC %u",
+         DigitiserIndex, Cassette, dp.channel, dp.adc);
       counters.ReadoutsInvalidAdc++;
       continue;
     }
@@ -194,11 +192,14 @@ void MBCaenInstrument::LoadAndProcessReadouts(int DigitiserIndex, std::vector<Re
 
     XTRACE(DATA, DEB, "time %u, channel %u, adc %u",
            dp.local_time, dp.channel, dp.adc);
-    XTRACE(DATA, DEB, "Readout (%s) -> cassette=%d plane=%d coord=%d",
-           dp.debug().c_str(), Cassette, plane, (uint16_t)coord);
 
-    assert(dp.local_time * MultibladeConfig.TimeTickNS < 0xffffffff);
-    uint64_t Time = (uint64_t)(dp.local_time * MultibladeConfig.TimeTickNS);
+    if (Cassette == 10) {
+    XTRACE(DATA, ALW, "Readout (%s) -> cassette=%d plane=%d coord=%d",
+           dp.debug().c_str(), Cassette, plane, (uint16_t)coord);
+    }
+
+    assert(dp.local_time * config.TimeTickNS < 0xffffffff);
+    uint64_t Time = (uint64_t)(dp.local_time * config.TimeTickNS);
 
     builders[Cassette].insert({Time, (uint16_t)coord, dp.adc, plane});
   }

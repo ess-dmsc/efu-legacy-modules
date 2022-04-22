@@ -2,7 +2,7 @@
 {
   "Detector": "MB18",
 
-  "InstrumentGeometry": "Freia",
+  "InstrumentGeometry": "AMOR B",
 
   "DigitizerConfig" : [
     { "index" : 0, "id" : 137 },
@@ -13,11 +13,15 @@
     { "index" : 5, "id" :  34 }
   ],
 
-  "Mixed1D2DMode" : true,
-
-  "cassettes": 6,
   "wires": 32,
   "strips": 32,
 
-  "TimeTickNS": 20000000
+  "MonitorCassette" : 0,
+  "MonitorChannel" : 63,
+
+  "MaxGapWire"  : 32,
+  "MaxGapStrip" : 32,
+  "MaxValidADC" : 65535,
+
+  "TimeTickNS": 16
 }

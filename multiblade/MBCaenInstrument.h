@@ -74,7 +74,7 @@ public:
 
   DataParser parser;
   ESSGeometry essgeom;
-  Config MultibladeConfig;
+  Config config;
   std::shared_ptr<ReadoutFile> dumpfile;
 };
 

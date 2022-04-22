@@ -1,4 +1,4 @@
-/* Copyright (C) 2018 European Spallation Source, ERIC. See LICENSE file */
+// Copyright (C) 2018 - 2022 European Spallation Source, ERIC. See LICENSE file
 //===----------------------------------------------------------------------===//
 ///
 /// \file
@@ -26,12 +26,7 @@ Config::Config(std::string jsonfile) : ConfigFile(jsonfile) {
     throw std::runtime_error("Unable to load configuration file.");
   }
 
-  if (Instrument == InstrumentGeometry::Estia) {
-    Mappings = std::make_shared<DigitizerMapping>(Digitisers);
-
-  } else if (Instrument == InstrumentGeometry::Freia) {
-    Mappings = std::make_shared<DigitizerMapping>(Digitisers); /// \todo add parameters for Freia
-  }
+  Mappings = std::make_shared<DigitizerMapping>(Digitisers);
 
   assert(Mappings != nullptr);
 }
@@ -60,35 +55,21 @@ void Config::loadConfigFile() {
 
   /// extract config parameters below
 
-    auto instr = root["InstrumentGeometry"].get<std::string>();
-
-    if (instr.compare("Estia") == 0) {
-      Instrument = InstrumentGeometry::Estia;
-    } else if (instr.compare("Freia") == 0) {
-      Instrument = InstrumentGeometry::Freia;
-    } else {
-      LOG(INIT, Sev::Error, "JSON config - error: Unknown instrument specified");
-      return;
-    }
-
     auto det = root["Detector"].get<std::string>();
-
-    if (det.compare("MB18") == 0) {
-      DetectorType = DetectorType::MB18;
-    } else if (det.compare("MB16") == 0) {
-      DetectorType = DetectorType::MB16;
-    } else {
-      LOG(INIT, Sev::Warning, "JSON config - error: Unknown detector specified");
+    if (det.compare("MB18") != 0) {
+      LOG(INIT, Sev::Warning, "JSON config error - Expected MB18 detector");
       return;
     }
 
-    Mixed1D2DMode = root["Mixed1D2DMode"].get<bool>();
-    NCass = root["cassettes"].get<unsigned int>();
+    auto instr = root["InstrumentGeometry"].get<std::string>();
+    if (instr != "AMOR B") {
+      LOG(INIT, Sev::Warning, "Caen config file error - 'AMOR B' geometry expected");
+    }
+
     NWires  = root["wires"].get<unsigned int>();
     NStrips = root["strips"].get<unsigned int>();
 
-
-    if ((NWires == 0) or (NStrips == 0) or (NCass == 0)) {
+    if ((NWires == 0) or (NStrips == 0)) {
       LOG(INIT, Sev::Warning, "JSON config - error: invalid geometry");
       return;
     }
@@ -102,10 +83,12 @@ void Config::loadConfigFile() {
       LOG(INIT, Sev::Info, "JSON config - Digitiser {}, offset {}", digit.digid, digit.index);
     }
 
-    if (Mixed1D2DMode) {
-      NCass = Digitisers.size() * 2 - 1;
-      printf("Mixed1D2DMode: %zu digitizers -> %u cassettes\n", Digitisers.size(), NCass);
-    }
+    NCass = Digitisers.size() * 2 - 1;
+    printf("Mixed1D2DMode: %zu digitizers -> %u cassettes\n", Digitisers.size(), NCass);
+
+    MaxGapWire = root["MaxGapWire"].get<int>();
+    MaxGapStrip = root["MaxGapStrip"].get<int>();
+    MaxValidADC = root["MaxValidADC"].get<int>();
 
     TimeTickNS = root["TimeTickNS"].get<uint32_t>();
     assert(TimeTickNS != 0);

@@ -52,7 +52,7 @@ public:
   bool filter_time_span{true};
   uint32_t filter_time_span_value{125};
 
-  int max_valid_adc{65534};
+  int MaxValidADC{65534};
 
   /// local readout timestamp resolution, ns per time tick
   uint32_t TimeTickNS{16};
@@ -61,7 +61,10 @@ public:
   std::shared_ptr<DigitizerMapping> Mappings;
 
   // New entry for mixed mode
-  bool Mixed1D2DMode{false};
+  bool Mixed1D2DMode{true};
+
+  int MaxGapWire{0};
+  int MaxGapStrip{1};
 
 private:
   /// \brief helper function to load and parse json file
