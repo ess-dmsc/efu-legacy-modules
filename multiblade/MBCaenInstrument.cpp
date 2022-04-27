@@ -193,10 +193,10 @@ void MBCaenInstrument::LoadAndProcessReadouts(int DigitiserIndex, std::vector<Re
     XTRACE(DATA, DEB, "time %u, channel %u, adc %u",
            dp.local_time, dp.channel, dp.adc);
 
-    if (Cassette == 10) {
-    XTRACE(DATA, ALW, "Readout (%s) -> cassette=%d plane=%d coord=%d",
-           dp.debug().c_str(), Cassette, plane, (uint16_t)coord);
-    }
+    // if (Cassette == 10) {
+    // XTRACE(DATA, ALW, "Readout (%s) -> cassette=%d plane=%d coord=%d",
+    //        dp.debug().c_str(), Cassette, plane, (uint16_t)coord);
+    // }
 
     assert(dp.local_time * config.TimeTickNS < 0xffffffff);
     uint64_t Time = (uint64_t)(dp.local_time * config.TimeTickNS);
