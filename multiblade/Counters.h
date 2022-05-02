@@ -38,6 +38,7 @@ struct Counters {
     int64_t Events;
     int64_t Events2D;
     int64_t Events1D;
+    int64_t Events1DDiscard;
     int64_t EventsNoCoincidence;
     int64_t EventsMatchedClusters;
     int64_t EventsInvalidStripGap;

@@ -67,6 +67,7 @@ CAENBase::CAENBase(BaseSettings const &settings, struct CAENSettings &LocalMBCAE
   Stats.create("events.count", Counters.Events);
   Stats.create("events.2D", Counters.Events2D);
   Stats.create("events.1D", Counters.Events1D);
+  Stats.create("events.1DDiscard", Counters.Events1DDiscard);
   Stats.create("events.geometry_errors", Counters.GeometryErrors);
   Stats.create("events.no_coincidence", Counters.EventsNoCoincidence);
   Stats.create("events.matched_clusters", Counters.EventsMatchedClusters);
@@ -189,6 +190,10 @@ void CAENBase::processing_thread() {
       // Strips == X == ClusterA
       // Wires  == Y == ClusterB
       for (int Cassette = 0; Cassette <= MBCaen.amorgeom.Cassette2D; Cassette++) {
+        if (MBCaen.ModuleSettings.Alignment && MBCaen.amorgeom.is1DDetector(Cassette)) {
+          Counters.Events1DDiscard++;
+          continue;
+        }
         for (const auto &e : MBCaen.builders[Cassette].Events) {
 
           // 2D events must have coincidences for both planes, but not 1D
@@ -197,7 +202,6 @@ void CAENBase::processing_thread() {
             continue;
           }
 
-#if 1
           // Discard if there are gaps in the strip channels
           if (e.ClusterA.hits.size() < e.ClusterA.coord_span()) {
             int StripGap = e.ClusterA.coord_span() - e.ClusterA.hits.size();
@@ -215,7 +219,6 @@ void CAENBase::processing_thread() {
               continue;
             }
           }
-#endif
 
           Counters.EventsMatchedClusters++;
 
@@ -223,13 +226,13 @@ void CAENBase::processing_thread() {
           // calculate local x and y using center of mass
           uint16_t x{0};
           uint16_t y{0};
-          if (!MBCaen.amorgeom.is1DDetector(Cassette)) {
+
+          if (MBCaen.ModuleSettings.Alignment) {
             x = static_cast<uint16_t>(std::round(e.ClusterA.coord_center()));
-            y = static_cast<uint16_t>(std::round(e.ClusterB.coord_center()));
           } else {
             x = 0;
-            y = static_cast<uint16_t>(std::round(e.ClusterB.coord_center()));
           }
+          y = static_cast<uint16_t>(std::round(e.ClusterB.coord_center()));
 
           // Calculate event (t, pix)
           uint64_t time = e.time_start();
