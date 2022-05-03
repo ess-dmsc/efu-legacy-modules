@@ -146,66 +146,75 @@ void MBCaenInstrument::FixJumpsAndSort(int DigitiserIndex, std::vector<Readout> 
 // Here readouts from the same digitizer can end up in different
 // builders - one per cassette
 void MBCaenInstrument::LoadAndProcessReadouts(int DigitiserIndex, std::vector<Readout> &vec) {
-  for (auto &dp : vec) {
+  for (Readout &dp : vec) {
     int Cassette = getCassette(DigitiserIndex, dp.channel);
     assert(Cassette <= 10);
     assert(Cassette >= 0);
 
-    if (not amorgeom.isValidChannel(dp.channel)) {
-      counters.ReadoutsInvalidChannel++;
-      continue;
-    }
-
-    if (dp.adc > config.MaxValidADC) {
-      XTRACE(DATA, INF, "Bad ADC: DigitiserIndex %u, Cassette %2u, Channel %2u, ADC %u",
-         DigitiserIndex, Cassette, dp.channel, dp.adc);
-      counters.ReadoutsInvalidAdc++;
-      continue;
-    }
-
-    uint8_t plane = amorgeom.getPlane(Cassette, dp.channel);
-
-    if (amorgeom.isMonitor(Cassette, dp.channel)) {
-      counters.ReadoutsMonitor++;
-    }
-
-    int coord;
-    if (plane == 0) {
-      coord = amorgeom.getXCoord(Cassette, dp.channel);
-      //printf("Cassette %d, Channel: %u - x-coord %d\n", Cassette, dp.channel, coord);
-    } else  if (plane == 1) {
-      coord = amorgeom.getYCoord(Cassette, dp.channel);
-      //printf("Cassette %d, Channel: %u - y-coord %d\n", Cassette, dp.channel, coord);
-      assert(coord < 352);
-    } else {
-      counters.ReadoutsInvalidPlane++;
-      continue;
-    }
-
-    counters.ReadoutsGood++;
-
-    if (amorgeom.is1DDetector(Cassette)) {
-      counters.Readouts1D++;
-    } else {
-      counters.Readouts2D++;
-    }
-
     XTRACE(DATA, DEB, "time %u, channel %u, adc %u",
            dp.local_time, dp.channel, dp.adc);
-
-    // if (Cassette == 10) {
-    // XTRACE(DATA, ALW, "Readout (%s) -> cassette=%d plane=%d coord=%d",
-    //        dp.debug().c_str(), Cassette, plane, (uint16_t)coord);
-    // }
 
     assert(dp.local_time * config.TimeTickNS < 0xffffffff);
     uint64_t Time = (uint64_t)(dp.local_time * config.TimeTickNS);
 
-    builders[Cassette].insert({Time, (uint16_t)coord, dp.adc, plane});
+    if (amorgeom.isMonitor(Cassette, dp.channel)) {
+      handleMonitorReadout(Time);
+    } else {
+      handleDetectorReadout(Cassette, dp, Time);
+    }
   }
+
   for (auto & builder : builders) {
     builder.flush();
   }
+}
+
+
+void MBCaenInstrument::handleMonitorReadout(uint64_t Time) {
+  XTRACE(DATA, DEB, "monitor data: Time %" PRIu64 "", Time);
+  // Monitor coordinate, adc and placearbitrarily set to 0
+  // we only care about the timestamp
+  MonitorHits.push_back({Time, 0, 0, 0});
+  counters.MonitorCount++;
+}
+
+void MBCaenInstrument::handleDetectorReadout(int Cassette, Readout & dp, uint64_t Time) {
+  if (not amorgeom.isValidChannel(dp.channel)) {
+    counters.ReadoutsInvalidChannel++;
+    return;
+  }
+
+  if (dp.adc > config.MaxValidADC) {
+    XTRACE(DATA, INF, "Bad ADC: Cassette %2u, Channel %2u, ADC %u",
+       Cassette, dp.channel, dp.adc);
+    counters.ReadoutsInvalidAdc++;
+    return;
+  }
+
+  uint8_t plane = amorgeom.getPlane(Cassette, dp.channel);
+  int coord;
+  if (plane == 0) {
+    coord = amorgeom.getXCoord(Cassette, dp.channel);
+    //printf("Cassette %d, Channel: %u - x-coord %d\n", Cassette, dp.channel, coord);
+  } else  if (plane == 1) {
+    coord = amorgeom.getYCoord(Cassette, dp.channel);
+    //printf("Cassette %d, Channel: %u - y-coord %d\n", Cassette, dp.channel, coord);
+    assert(coord < 352);
+  } else {
+    counters.ReadoutsInvalidPlane++;
+    return;
+  }
+
+  counters.ReadoutsGood++;
+
+  if (amorgeom.is1DDetector(Cassette)) {
+    counters.Readouts1D++;
+  } else {
+    counters.Readouts2D++;
+  }
+
+  /// \todo might be the place to skip strip channels in 1D mode
+  builders[Cassette].insert({Time, (uint16_t)coord, dp.adc, plane});
 }
 
 

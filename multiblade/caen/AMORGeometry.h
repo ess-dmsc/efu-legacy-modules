@@ -19,7 +19,7 @@
 class AMORGeometry {
 public:
   const int MonitorChannel{63};
-  const int MonitorCassette{0};
+  const int MonitorCassette{10};
   const int Cassette2D{10};
 
 

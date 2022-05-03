@@ -54,6 +54,12 @@ void FixJumpsAndSort(int builder, std::vector<Readout> &vec);
 // load and flush as appropriate
 void LoadAndProcessReadouts(int builder, std::vector<Readout> &vec);
 
+/// \brief separate detector data and monitors
+void handleDetectorReadout(int Cassette, Readout & dp, uint64_t Time);
+
+/// \brief separate detector data and monitors
+void handleMonitorReadout(uint64_t Time);
+
 public:
   /// \brief Stuff that 'ties' Multiblade together
   struct Counters & counters;
@@ -71,6 +77,7 @@ public:
   Hists histograms{1, 1}; // reinit in ctor
   AMORGeometry amorgeom; // reinit in ctor
   std::vector<EventBuilder> builders; // reinit in ctor
+  std::vector<Hit> MonitorHits;
 
   DataParser parser;
   ESSGeometry essgeom;

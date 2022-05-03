@@ -55,12 +55,14 @@ CAENBase::CAENBase(BaseSettings const &settings, struct CAENSettings &LocalMBCAE
   Stats.create("readouts.invalid_ch", Counters.ReadoutsInvalidChannel);
   Stats.create("readouts.invalid_adc", Counters.ReadoutsInvalidAdc);
   Stats.create("readouts.invalid_plane", Counters.ReadoutsInvalidPlane);
-  Stats.create("readouts.monitor", Counters.ReadoutsMonitor);
   Stats.create("readouts.timer_wraps", Counters.ReadoutsTimerWraps);
 
   Stats.create("readouts.error_version", Counters.ReadoutsErrorVersion);
   Stats.create("readouts.error_bytes", Counters.ReadoutsErrorBytes);
   Stats.create("readouts.seq_errors", Counters.ReadoutsSeqErrors);
+
+  Stats.create("monitor.count", Counters.MonitorCount);
+  Stats.create("monitor.txbytes", Counters.MonitorTxBytes);
 
   Stats.create("thread.processing_idle", Counters.ProcessingIdle);
 
@@ -159,7 +161,14 @@ void CAENBase::processing_thread() {
   auto Produce = [&eventprod](auto DataBuffer, auto Timestamp) {
     eventprod.produce(DataBuffer, Timestamp);
   };
-  EV42Serializer flatbuffer{KafkaBufferSize, "multiblade", Produce};
+  EV42Serializer events{KafkaBufferSize, "multiblade", Produce};
+
+  // Event producer
+  Producer monprod(EFUSettings.KafkaBroker, "amor_beam_monitor");
+  auto ProduceII = [&monprod](auto DataBuffer, auto Timestamp) {
+    monprod.produce(DataBuffer, Timestamp);
+  };
+  EV42Serializer monitor{KafkaBufferSize, "mon", ProduceII};
 
   unsigned int data_index;
   TSCTimer produce_timer(EFUSettings.UpdateIntervalSec * 1000000 * TSC_MHZ);
@@ -180,12 +189,18 @@ void CAENBase::processing_thread() {
       auto dataptr = RxRingbuffer.getDataBuffer(data_index);
 
       uint64_t efu_time = 1000000000LU * (uint64_t)time(NULL); // ns since 1970
-      flatbuffer.pulseTime(efu_time);
+      events.pulseTime(efu_time);
 
       // \todo state some assumptions here
-      if (not MBCaen.parsePacket(dataptr, datalen, flatbuffer)) {
+      if (not MBCaen.parsePacket(dataptr, datalen, events)) {
         continue;
       }
+
+      XTRACE(PROCESS, DEB, "Received %u monitor counts", MBCaen.MonitorHits.size());
+      for (Hit & hit : MBCaen.MonitorHits) {
+        Counters.MonitorTxBytes += monitor.addEvent(hit.time, 1);
+      }
+      MBCaen.MonitorHits.clear();
 
       // Strips == X == ClusterA
       // Wires  == Y == ClusterB
@@ -246,7 +261,7 @@ void CAENBase::processing_thread() {
             XTRACE(EVENT, DEB, "pixel error: time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
             Counters.GeometryErrors++;
           } else {
-            Counters.TxBytes += flatbuffer.addEvent(time, pixel_id);
+            Counters.TxBytes += events.addEvent(time, pixel_id);
             Counters.Events++;
             if (MBCaen.amorgeom.is1DDetector(Cassette)) {
               Counters.Events1D++;
@@ -281,7 +296,8 @@ void CAENBase::processing_thread() {
 
       RuntimeStatusMask =  RtStat.getRuntimeStatusMask({Counters.RxPackets, Counters.Events, Counters.TxBytes});
 
-      Counters.TxBytes += flatbuffer.produce();
+      Counters.TxBytes += events.produce();
+      Counters.MonitorTxBytes += monitor.produce();
 
       if (!MBCaen.histograms.isEmpty()) {
         // XTRACE(PROCESS, INF, "Sending histogram for %zu readouts",

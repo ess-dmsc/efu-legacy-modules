@@ -27,14 +27,15 @@ struct Counters {
     int64_t PacketBadDigitizer;
     int64_t ReadoutsCount;
     int64_t ReadoutsGood;
-    int64_t ReadoutsMonitor; /// \todo so far hardcoded
     int64_t ReadoutsInvalidAdc;
     int64_t ReadoutsInvalidChannel;
     int64_t ReadoutsInvalidPlane;
     int64_t ReadoutsTimerWraps;
-    int64_t ProcessingIdle;
     int64_t Readouts2D;
     int64_t Readouts1D;
+    int64_t MonitorCount;
+    int64_t MonitorTxBytes;
+    int64_t ProcessingIdle;
     int64_t Events;
     int64_t Events2D;
     int64_t Events1D;
@@ -46,6 +47,7 @@ struct Counters {
     int64_t EventsMaxTofNS;
     int64_t GeometryErrors;
     int64_t TxBytes;
+
     // Kafka stats below are common to all detectors
     int64_t kafka_produce_fails;
     int64_t kafka_ev_errors;
