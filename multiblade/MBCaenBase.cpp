@@ -47,19 +47,22 @@ CAENBase::CAENBase(BaseSettings const &settings, struct CAENSettings &LocalMBCAE
   Stats.create("receive.dropped", Counters.FifoPushErrors);
   Stats.create("receive.fifo_seq_errors", Counters.FifoSeqErrors);
 
-  Stats.create("receive.packet_bad_header", Counters.PacketBadDigitizer);
+  Stats.create("headers.packet_bad_header", Counters.PacketBadDigitizer);
+  Stats.create("headers.error_version", Counters.ReadoutsErrorVersion);
+  Stats.create("headers.seq_errors", Counters.ReadoutsSeqErrors);
+
   Stats.create("readouts.count", Counters.ReadoutsCount);
-  Stats.create("readouts.count1D", Counters.Readouts1D);
-  Stats.create("readouts.count2D", Counters.Readouts2D);
+  Stats.create("readouts.2D_x", Counters.Readouts2DX);
+  Stats.create("readouts.2D_y", Counters.Readouts2DY);
+  Stats.create("readouts.1D_y", Counters.Readouts1DY);
+  Stats.create("readouts.discard.1D", Counters.ReadoutsDiscard1D);
+  Stats.create("readouts.discard.strips", Counters.ReadoutsDiscardStrips);
   Stats.create("readouts.count_valid", Counters.ReadoutsGood);
   Stats.create("readouts.invalid_ch", Counters.ReadoutsInvalidChannel);
   Stats.create("readouts.invalid_adc", Counters.ReadoutsInvalidAdc);
   Stats.create("readouts.invalid_plane", Counters.ReadoutsInvalidPlane);
   Stats.create("readouts.timer_wraps", Counters.ReadoutsTimerWraps);
-
-  Stats.create("readouts.error_version", Counters.ReadoutsErrorVersion);
   Stats.create("readouts.error_bytes", Counters.ReadoutsErrorBytes);
-  Stats.create("readouts.seq_errors", Counters.ReadoutsSeqErrors);
 
   Stats.create("monitor.count", Counters.MonitorCount);
   Stats.create("monitor.txbytes", Counters.MonitorTxBytes);
@@ -168,7 +171,7 @@ void CAENBase::processing_thread() {
   auto ProduceII = [&monprod](auto DataBuffer, auto Timestamp) {
     monprod.produce(DataBuffer, Timestamp);
   };
-  EV42Serializer monitor{KafkaBufferSize, "mon", ProduceII};
+  EV42Serializer monitor{KafkaBufferSize, "ttlmon0", ProduceII};
 
   unsigned int data_index;
   TSCTimer produce_timer(EFUSettings.UpdateIntervalSec * 1000000 * TSC_MHZ);
@@ -205,52 +208,53 @@ void CAENBase::processing_thread() {
       // Strips == X == ClusterA
       // Wires  == Y == ClusterB
       for (int Cassette = 0; Cassette <= MBCaen.amorgeom.Cassette2D; Cassette++) {
-        if (MBCaen.ModuleSettings.Alignment && MBCaen.amorgeom.is1DDetector(Cassette)) {
-          Counters.Events1DDiscard++;
-          continue;
-        }
-        for (const auto &e : MBCaen.builders[Cassette].Events) {
+        for (const auto &Event : MBCaen.builders[Cassette].Events) {
+          if (MBCaen.ModuleSettings.Alignment) {
+            if (MBCaen.amorgeom.is1DDetector(Cassette)) {
+              Counters.Events1DDiscard++;
+              continue;
+            }
 
-          // 2D events must have coincidences for both planes, but not 1D
-          if (!MBCaen.amorgeom.is1DDetector(Cassette) && !e.both_planes()) {
-            Counters.EventsNoCoincidence++;
-            continue;
-          }
-
-          // Discard if there are gaps in the strip channels
-          if (e.ClusterA.hits.size() < e.ClusterA.coord_span()) {
-            int StripGap = e.ClusterA.coord_span() - e.ClusterA.hits.size();
-            if (StripGap >= MBCaen.config.MaxGapStrip) {
-              Counters.EventsInvalidStripGap++;
+            // 2D events must have coincidences for both planes, but not 1D
+            // This is only relevant for alignment mode and for 2D detectors
+            if (not Event.both_planes()) {
+              Counters.EventsNoCoincidence++;
               continue;
             }
           }
 
+          // // Discard if there are gaps in the strip channels
+          // if (Event.ClusterA.hits.size() < Event.ClusterA.coord_span()) {
+          //   int StripGap = Event.ClusterA.coord_span() - Event.ClusterA.hits.size();
+          //   if (StripGap >= MBCaen.config.MaxGapStrip) {
+          //     Counters.EventsInvalidStripGap++;
+          //     continue;
+          //   }
+          // }
+          //
           // Discard if there are gaps in the wire channels
-          if (e.ClusterB.hits.size() < e.ClusterB.coord_span()) {
-            int WireGap = e.ClusterB.coord_span() - e.ClusterB.hits.size();
-            if (WireGap >= MBCaen.config.MaxGapWire) {
-              Counters.EventsInvalidWireGap++;
-              continue;
-            }
-          }
+          // if (Event.ClusterB.hits.size() < Event.ClusterB.coord_span()) {
+          //   int WireGap = Event.ClusterB.coord_span() - Event.ClusterB.hits.size();
+          //   if (WireGap >= MBCaen.config.MaxGapWire) {
+          //     Counters.EventsInvalidWireGap++;
+          //     continue;
+          //   }
+          // }
 
-          Counters.EventsMatchedClusters++;
+          XTRACE(EVENT, INF, "Event Valid\n %s", Event.to_string({}, true).c_str());
 
-          XTRACE(EVENT, INF, "Event Valid\n %s", e.to_string({}, true).c_str());
-          // calculate local x and y using center of mass
           uint16_t x{0};
           uint16_t y{0};
 
           if (MBCaen.ModuleSettings.Alignment) {
-            x = static_cast<uint16_t>(std::round(e.ClusterA.coord_center()));
+            x = static_cast<uint16_t>(std::round(Event.ClusterA.coord_center()));
           } else {
             x = 0;
           }
-          y = static_cast<uint16_t>(std::round(e.ClusterB.coord_center()));
+          y = static_cast<uint16_t>(std::round(Event.ClusterB.coord_center()));
 
           // Calculate event (t, pix)
-          uint64_t time = e.time_start();
+          uint64_t time = Event.time_start();
           if (time > MBCaen.config.MaxTofNS) {
             Counters.EventsMaxTofNS++;
           }
@@ -263,10 +267,10 @@ void CAENBase::processing_thread() {
           } else {
             Counters.TxBytes += events.addEvent(time, pixel_id);
             Counters.Events++;
-            if (MBCaen.amorgeom.is1DDetector(Cassette)) {
-              Counters.Events1D++;
-            } else {
+            if (MBCaen.ModuleSettings.Alignment) {
               Counters.Events2D++;
+            } else {
+              Counters.Events1D++;
             }
           }
         }

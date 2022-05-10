@@ -31,8 +31,11 @@ struct Counters {
     int64_t ReadoutsInvalidChannel;
     int64_t ReadoutsInvalidPlane;
     int64_t ReadoutsTimerWraps;
-    int64_t Readouts2D;
-    int64_t Readouts1D;
+    int64_t Readouts1DY;
+    int64_t Readouts2DX;
+    int64_t Readouts2DY;
+    int64_t ReadoutsDiscardStrips;
+    int64_t ReadoutsDiscard1D;
     int64_t MonitorCount;
     int64_t MonitorTxBytes;
     int64_t ProcessingIdle;

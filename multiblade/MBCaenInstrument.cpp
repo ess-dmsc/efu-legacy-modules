@@ -192,29 +192,53 @@ void MBCaenInstrument::handleDetectorReadout(int Cassette, Readout & dp, uint64_
   }
 
   uint8_t plane = amorgeom.getPlane(Cassette, dp.channel);
-  int coord;
-  if (plane == 0) {
-    coord = amorgeom.getXCoord(Cassette, dp.channel);
-    //printf("Cassette %d, Channel: %u - x-coord %d\n", Cassette, dp.channel, coord);
-  } else  if (plane == 1) {
-    coord = amorgeom.getYCoord(Cassette, dp.channel);
-    //printf("Cassette %d, Channel: %u - y-coord %d\n", Cassette, dp.channel, coord);
-    assert(coord < 352);
+
+  if (ModuleSettings.Alignment) {
+    accept2DReadout(Cassette, Time, plane, dp.channel, dp.adc);
   } else {
-    counters.ReadoutsInvalidPlane++;
+    accept1DReadout(Cassette, Time, plane, dp.channel, dp.adc);
+  }
+}
+
+void MBCaenInstrument::accept2DReadout(int Cassette, uint64_t Time, uint8_t Plane, uint16_t Channel, uint16_t Adc) {
+  if (amorgeom.is1DDetector(Cassette)) {
+    counters.ReadoutsDiscard1D++;
     return;
   }
 
-  counters.ReadoutsGood++;
-
-  if (amorgeom.is1DDetector(Cassette)) {
-    counters.Readouts1D++;
-  } else {
-    counters.Readouts2D++;
+  if (Plane == 0) {
+    int coord = amorgeom.getXCoord(Cassette, Channel);
+    builders[Cassette].insert({Time, (uint16_t)coord, Adc, Plane});
+    counters.Readouts2DX++;
+    counters.ReadoutsGood++;
+    return;
+  } else if (Plane == 1) {
+    int coord = amorgeom.getYCoord(Cassette, Channel);
+    builders[Cassette].insert({Time, (uint16_t)coord, Adc, Plane});
+    counters.Readouts2DY++;
+    counters.ReadoutsGood++;
   }
+  // fallthrough
+  counters.ReadoutsInvalidPlane++;
+  return;
+}
 
-  /// \todo might be the place to skip strip channels in 1D mode
-  builders[Cassette].insert({Time, (uint16_t)coord, dp.adc, plane});
+
+/// \brief discard x channels
+void MBCaenInstrument::accept1DReadout(int Cassette, uint64_t Time, uint8_t Plane, uint16_t Channel, uint16_t Adc) {
+  if (Plane == 0) {
+    counters.ReadoutsDiscardStrips++;
+    return;
+  } else if (Plane == 1) {
+    int coord = amorgeom.getYCoord(Cassette, Channel);
+    builders[Cassette].insert({Time, (uint16_t)coord, Adc, Plane});
+    counters.Readouts1DY++;
+    counters.ReadoutsGood++;
+    return;
+  }
+  // fallthrough
+  counters.ReadoutsInvalidPlane++;
+  return;
 }
 
 
