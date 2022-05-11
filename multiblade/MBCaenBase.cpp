@@ -76,6 +76,8 @@ CAENBase::CAENBase(BaseSettings const &settings, struct CAENSettings &LocalMBCAE
   Stats.create("events.1DDiscard", Counters.Events1DDiscard);
   Stats.create("events.geometry_errors", Counters.GeometryErrors);
   Stats.create("events.no_coincidence", Counters.EventsNoCoincidence);
+  Stats.create("events.wiremult_single", Counters.EventsWireMultSingle);
+  Stats.create("events.wiremult_twoplus", Counters.EventsWireMultTwoPlus);
   Stats.create("events.matched_clusters", Counters.EventsMatchedClusters);
   Stats.create("events.strip_gaps", Counters.EventsInvalidStripGap);
   Stats.create("events.wire_gaps", Counters.EventsInvalidWireGap);
@@ -242,6 +244,14 @@ void CAENBase::processing_thread() {
           //     continue;
           //   }
           // }
+
+          if (Event.ClusterB.hits.size() > 1) {
+            Counters.EventsWireMultTwoPlus++;
+          }
+
+          if (Event.ClusterB.hits.size() == 1) {
+            Counters.EventsWireMultSingle++;
+          }
 
           XTRACE(EVENT, DEB, "Event Valid\n %s", Event.to_string({}, true).c_str());
 
