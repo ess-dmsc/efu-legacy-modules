@@ -61,6 +61,7 @@ CAENBase::CAENBase(BaseSettings const &settings, struct CAENSettings &LocalMBCAE
   Stats.create("readouts.invalid_ch", Counters.ReadoutsInvalidChannel);
   Stats.create("readouts.invalid_adc", Counters.ReadoutsInvalidAdc);
   Stats.create("readouts.invalid_plane", Counters.ReadoutsInvalidPlane);
+  Stats.create("readouts.large_tof", Counters.ReadoutsTOFLarge);
   Stats.create("readouts.timer_wraps", Counters.ReadoutsTimerWraps);
   Stats.create("readouts.error_bytes", Counters.ReadoutsErrorBytes);
 
@@ -218,6 +219,7 @@ void CAENBase::processing_thread() {
             // 2D events must have coincidences for both planes, but not 1D
             // This is only relevant for alignment mode and for 2D detectors
             if (not Event.both_planes()) {
+              XTRACE(EVENT, INF, "No coincidence\n %s", Event.to_string({}, true).c_str());
               Counters.EventsNoCoincidence++;
               continue;
             }
@@ -241,7 +243,7 @@ void CAENBase::processing_thread() {
           //   }
           // }
 
-          XTRACE(EVENT, INF, "Event Valid\n %s", Event.to_string({}, true).c_str());
+          XTRACE(EVENT, DEB, "Event Valid\n %s", Event.to_string({}, true).c_str());
 
           uint16_t x{0};
           uint16_t y{0};

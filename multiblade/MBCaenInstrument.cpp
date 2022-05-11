@@ -121,7 +121,7 @@ void MBCaenInstrument::FixJumpsAndSort(int DigitiserIndex, std::vector<Readout> 
   int64_t PrevTime{0xffffffffff};
   std::vector<Readout> temp;
 
-  // Assume time gap detectino and data sorting can be done
+  // Assume time gap detection and data sorting can be done
   // per digitizer and not per cassette.
   for (auto &Readout : vec) {
     int64_t Time = (uint64_t)(Readout.local_time * config.TimeTickNS);
@@ -134,12 +134,12 @@ void MBCaenInstrument::FixJumpsAndSort(int DigitiserIndex, std::vector<Readout> 
       counters.ReadoutsTimerWraps++;
       std::sort(temp.begin(), temp.end(), compareByTime);
       LoadAndProcessReadouts(DigitiserIndex, temp);
-
       temp.clear();
       temp.push_back(Readout);
     }
     PrevTime = Time;
   }
+  std::sort(temp.begin(), temp.end(), compareByTime);
   LoadAndProcessReadouts(DigitiserIndex, temp);
 }
 
@@ -148,13 +148,14 @@ void MBCaenInstrument::FixJumpsAndSort(int DigitiserIndex, std::vector<Readout> 
 void MBCaenInstrument::LoadAndProcessReadouts(int DigitiserIndex, std::vector<Readout> &vec) {
   for (Readout &dp : vec) {
     int Cassette = getCassette(DigitiserIndex, dp.channel);
-    assert(Cassette <= 10);
-    assert(Cassette >= 0);
 
     XTRACE(DATA, DEB, "time %u, channel %u, adc %u",
            dp.local_time, dp.channel, dp.adc);
 
-    assert(dp.local_time * config.TimeTickNS < 0xffffffff);
+    if (dp.local_time * config.TimeTickNS >= 0xffffffffULL) {
+      counters.ReadoutsTOFLarge++;
+      continue;
+    }
     uint64_t Time = (uint64_t)(dp.local_time * config.TimeTickNS);
 
     if (amorgeom.isMonitor(Cassette, dp.channel)) {
@@ -217,6 +218,7 @@ void MBCaenInstrument::accept2DReadout(int Cassette, uint64_t Time, uint8_t Plan
     builders[Cassette].insert({Time, (uint16_t)coord, Adc, Plane});
     counters.Readouts2DY++;
     counters.ReadoutsGood++;
+    return;
   }
   // fallthrough
   counters.ReadoutsInvalidPlane++;

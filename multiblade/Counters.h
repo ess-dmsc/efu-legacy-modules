@@ -30,6 +30,7 @@ struct Counters {
     int64_t ReadoutsInvalidAdc;
     int64_t ReadoutsInvalidChannel;
     int64_t ReadoutsInvalidPlane;
+    int64_t ReadoutsTOFLarge;
     int64_t ReadoutsTimerWraps;
     int64_t Readouts1DY;
     int64_t Readouts2DX;
