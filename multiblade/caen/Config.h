@@ -60,9 +60,7 @@ public:
   /// Specify the digital geometry
   std::shared_ptr<DigitizerMapping> Mappings;
 
-  // New entry for mixed mode
-  bool Mixed1D2DMode{true};
-
+  bool CheckWireGap{true};
   int MaxGapWire{0};
   int MaxGapStrip{1};
   uint32_t MaxTofNS{1'000'000'000}; // 1s

@@ -35,8 +35,6 @@ std::string invaliddigitiser = R"(
       { "index" : 5, "id" :  34 }
     ],
 
-    "Mixed1D2DMode" : true,
-
     "TimeTickNS": 17
   }
 )";
@@ -55,8 +53,6 @@ std::string instrumentfreia = R"(
       { "index" : 4, "id" :  33 },
       { "index" : 5, "id" :  34 }
     ],
-
-    "Mixed1D2DMode" : true,
 
     "cassettes": 6,
     "wires": 32,
@@ -79,8 +75,6 @@ std::string invalidinstrument = R"(
       { "index" : 5, "id" :  34 }
     ],
 
-    "Mixed1D2DMode" : true,
-
     "TimeTickNS": 17
   }
 )";
@@ -99,8 +93,6 @@ std::string unknowninstrument = R"(
       { "index" : 4, "id" :  33 },
       { "index" : 5, "id" :  34 }
     ],
-
-    "Mixed1D2DMode" : true,
 
     "cassettes": 6,
     "wires": 32,
@@ -125,8 +117,6 @@ std::string validconfig = R"(
       { "index" : 5, "id" :  34 }
     ],
 
-    "Mixed1D2DMode" : true,
-
     "cassettes": 6,
     "wires": 32,
     "strips": 32,
@@ -150,8 +140,6 @@ std::string invalidgeometry = R"(
       { "index" : 4, "id" :  33 },
       { "index" : 5, "id" :  34 }
     ],
-
-    "Mixed1D2DMode" : true,
 
     "cassettes": 6,
     "wires": 0,

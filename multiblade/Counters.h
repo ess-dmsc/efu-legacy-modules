@@ -49,7 +49,8 @@ struct Counters {
     int64_t EventsWireMultSingle;
     int64_t EventsMatchedClusters;
     int64_t EventsInvalidStripGap;
-    int64_t EventsInvalidWireGap;
+    int64_t EventsWireGapCount;
+    int64_t EventsWireGapInvalid;
     int64_t EventsMaxTofNS;
     int64_t GeometryErrors;
     int64_t TxBytes;

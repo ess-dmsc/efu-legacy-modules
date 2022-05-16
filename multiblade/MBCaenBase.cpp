@@ -80,7 +80,8 @@ CAENBase::CAENBase(BaseSettings const &settings, struct CAENSettings &LocalMBCAE
   Stats.create("events.wiremult_twoplus", Counters.EventsWireMultTwoPlus);
   Stats.create("events.matched_clusters", Counters.EventsMatchedClusters);
   Stats.create("events.strip_gaps", Counters.EventsInvalidStripGap);
-  Stats.create("events.wire_gaps", Counters.EventsInvalidWireGap);
+  Stats.create("events.wiregap.count", Counters.EventsWireGapCount);
+  Stats.create("events.wiregap.invalid", Counters.EventsWireGapInvalid);
   Stats.create("events.max_tof_ns", Counters.EventsMaxTofNS);
 
   Stats.create("transmit.bytes", Counters.TxBytes);
@@ -208,6 +209,14 @@ void CAENBase::processing_thread() {
       }
       MBCaen.MonitorHits.clear();
 
+      // /// Attempt to use all 1D hits as events
+      // for (Hit & h1d : MBCaen.Hits1D) {
+      //   uint16_t x{0};
+      //   uint16_t y = h1d.coord;
+      //   auto pixel_id = MBCaen.essgeom.pixel2D(x, y);
+      //   uint64_t time = h1d.time;
+      // }
+
       // Strips == X == ClusterA
       // Wires  == Y == ClusterB
       for (int Cassette = 0; Cassette <= MBCaen.amorgeom.Cassette2D; Cassette++) {
@@ -236,14 +245,18 @@ void CAENBase::processing_thread() {
           //   }
           // }
           //
+
           // Discard if there are gaps in the wire channels
-          // if (Event.ClusterB.hits.size() < Event.ClusterB.coord_span()) {
-          //   int WireGap = Event.ClusterB.coord_span() - Event.ClusterB.hits.size();
-          //   if (WireGap >= MBCaen.config.MaxGapWire) {
-          //     Counters.EventsInvalidWireGap++;
-          //     continue;
-          //   }
-          // }
+          if (MBCaen.config.CheckWireGap) {
+            if (Event.ClusterB.hits.size() < Event.ClusterB.coord_span()) {
+              Counters.EventsWireGapCount++;
+              int WireGap = Event.ClusterB.coord_span() - Event.ClusterB.hits.size();
+              if (WireGap >= MBCaen.config.MaxGapWire) {
+                Counters.EventsWireGapInvalid++;
+                continue;
+              }
+            }
+          }
 
           if (Event.ClusterB.hits.size() > 1) {
             Counters.EventsWireMultTwoPlus++;

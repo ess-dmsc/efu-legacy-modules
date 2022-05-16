@@ -84,6 +84,7 @@ public:
   AMORGeometry amorgeom; // reinit in ctor
   std::vector<EventBuilder> builders; // reinit in ctor
   std::vector<Hit> MonitorHits;
+  std::vector<Hit> Hits1D;
 
   DataParser parser;
   ESSGeometry essgeom;

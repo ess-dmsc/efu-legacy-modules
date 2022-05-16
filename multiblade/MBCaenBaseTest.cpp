@@ -25,8 +25,6 @@
      { "index" : 5, "id" :  34 }
    ],
 
-   "Mixed1D2DMode" : true,   
-
    "cassettes": 6,
    "wires":  32,
    "strips": 32,
