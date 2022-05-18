@@ -233,7 +233,7 @@ void MBCaenInstrument::accept1DReadout(int Cassette, uint64_t Time, uint8_t Plan
     return;
   } else if (Plane == 1) {
     int coord = amorgeom.getYCoord(Cassette, Channel);
-    builders[Cassette].insert({Time, (uint16_t)coord, Adc, Plane});
+    Hits1D.push_back({Time, (uint16_t)coord, Adc, Plane});
     counters.Readouts1DY++;
     counters.ReadoutsGood++;
     return;
