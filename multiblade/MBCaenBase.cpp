@@ -199,7 +199,7 @@ void CAENBase::processing_thread() {
         events.pulseTime(efu_time);
 
         // \todo state some assumptions here
-        if (not MBCaen.parsePacket(dataptr, datalen, events)) {
+        if (not MBCaen.parseAndProcessPacket(dataptr, datalen, events)) {
           continue;
         }
 
@@ -209,6 +209,7 @@ void CAENBase::processing_thread() {
         }
         MBCaen.MonitorHits.clear();
 
+        //when alignment mode is active, process 2D events with event builders
         if(MBCaen.ModuleSettings.Alignment) {
           // Strips == X == ClusterA
           // Wires  == Y == ClusterB
@@ -290,17 +291,22 @@ void CAENBase::processing_thread() {
             MBCaen.builders[Cassette].Events.clear(); // else events will accumulate
           }
         } // interate over builders
-        else {
-          XTRACE(EVENT, DEB, "processing 1D event");
+        else { //when alignment mode isn't used, process 1D events directly per wire readout
+          XTRACE(EVENT, DEB, "processing 1D events");
           // /// Attempt to use all 1D hits as events
           for (Hit & h1d : MBCaen.Hits1D) {
             uint16_t x{0};
             uint16_t y = h1d.coordinate;
             auto pixel_id = MBCaen.essgeom.pixel2D(x, y);
             uint64_t time = h1d.time;
-            Counters.TxBytes += events.addEvent(time, pixel_id);
-            Counters.Events++;
-            Counters.Events1D++;
+            if (pixel_id == 0) {
+                XTRACE(EVENT, DEB, "pixel error: time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
+                Counters.GeometryErrors++;
+              } else {
+                Counters.TxBytes += events.addEvent(time, pixel_id);
+                Counters.Events++;
+                Counters.Events1D++;
+              }
           }
           MBCaen.Hits1D.clear();
         }

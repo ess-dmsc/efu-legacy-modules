@@ -55,7 +55,7 @@ MBCaenInstrument::MBCaenInstrument(struct Counters & counters,
 
 
 // Moved from MBCaenBase to better support unit testing
-bool MBCaenInstrument::parsePacket(char * data, int length,  EV42Serializer & ev42ser) {
+bool MBCaenInstrument::parseAndProcessPacket(char * data, int length,  EV42Serializer & ev42ser) {
 
   int res = parser.parse(data, length);
 
@@ -226,12 +226,12 @@ void MBCaenInstrument::accept2DReadout(int Cassette, uint64_t Time, uint8_t Plan
 }
 
 
-/// \brief discard x channels
+/// \brief discard x channels and adds each y readout to Hits1D vector
 void MBCaenInstrument::accept1DReadout(int Cassette, uint64_t Time, uint8_t Plane, uint16_t Channel, uint16_t Adc) {
-  if (Plane == 0) {
+  if (Plane == 0) { // Plane 0 is strips readout and is invalid for 1D events
     counters.ReadoutsDiscardStrips++;
     return;
-  } else if (Plane == 1) {
+  if (Plane == 1) {
     int coord = amorgeom.getYCoord(Cassette, Channel);
     Hits1D.push_back({Time, (uint16_t)coord, Adc, Plane});
     counters.Readouts1DY++;

@@ -33,7 +33,7 @@ public:
 MBCaenInstrument(Counters & counters, BaseSettings & EFUSettings, CAENSettings & moduleSettings);
 
 ///
-bool parsePacket(char * data, int length, EV42Serializer & ev42ser);
+bool parseAndProcessPacket(char * data, int length, EV42Serializer & ev42ser);
 
 ///
 void ingestOneReadout(int cassette, const Readout & dp);
