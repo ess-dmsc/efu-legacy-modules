@@ -292,7 +292,7 @@ void CAENBase::processing_thread() {
           }
         } // interate over builders
         else { //when alignment mode isn't used, process 1D events directly per wire readout
-          XTRACE(EVENT, DEB, "processing 1D events");
+          XTRACE(EVENT, DEB, "processing %u 1D events", MBCaen.Hits1D.size());
           // /// Attempt to use all 1D hits as events
           for (Hit & h1d : MBCaen.Hits1D) {
             uint16_t x{0};
@@ -303,6 +303,7 @@ void CAENBase::processing_thread() {
                 XTRACE(EVENT, DEB, "pixel error: time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
                 Counters.GeometryErrors++;
               } else {
+                XTRACE(EVENT, DEB, "valid event: time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
                 Counters.TxBytes += events.addEvent(time, pixel_id);
                 Counters.Events++;
                 Counters.Events1D++;

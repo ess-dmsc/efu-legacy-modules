@@ -228,10 +228,15 @@ void MBCaenInstrument::accept2DReadout(int Cassette, uint64_t Time, uint8_t Plan
 
 /// \brief discard x channels and adds each y readout to Hits1D vector
 void MBCaenInstrument::accept1DReadout(int Cassette, uint64_t Time, uint8_t Plane, uint16_t Channel, uint16_t Adc) {
+  XTRACE(DATA, DEB, "Processing 1D readout, Cassette %u, Time %u, Plane %u, Channel %u, Adc %u",
+                    Cassette, Time, Plane, Channel, Adc);
   if (Plane == 0) { // Plane 0 is strips readout and is invalid for 1D events
+    XTRACE(DATA, DEB, "Strip readout in 1D mode, discarding");
     counters.ReadoutsDiscardStrips++;
     return;
+  }
   if (Plane == 1) {
+    XTRACE(DATA, DEB, "Wire readout in 1D mode, adding to Hits1D vector");
     int coord = amorgeom.getYCoord(Cassette, Channel);
     Hits1D.push_back({Time, (uint16_t)coord, Adc, Plane});
     counters.Readouts1DY++;
@@ -239,9 +244,9 @@ void MBCaenInstrument::accept1DReadout(int Cassette, uint64_t Time, uint8_t Plan
     return;
   }
   // fallthrough
+  XTRACE(DATA, DEB, "Invalid Plane %u", Plane);
   counters.ReadoutsInvalidPlane++;
   return;
 }
-
 
 } // namespace
