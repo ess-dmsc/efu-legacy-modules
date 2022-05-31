@@ -17,8 +17,10 @@ namespace Multiblade {
 /// \todo these tme values should be in ns. At the moment they are
 /// given in 'ticks'
 static constexpr uint64_t latency{2010}; // 2.01us
-static constexpr uint64_t timegap{
-    2000}; // expect readouts in a plane to be at least this close
+
+// expect readouts in a plane to be at least this close
+static constexpr uint64_t timegap{2000};
+
 static constexpr uint64_t coordgap{1}; // allow no gaps between channels
 
 const uint8_t WirePlane{0};

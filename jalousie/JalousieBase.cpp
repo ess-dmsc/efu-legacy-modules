@@ -12,7 +12,6 @@
 #include <common/kafka/Producer.h>
 #include <common/RuntimeStat.h>
 #include <common/time/TimeString.h>
-#include <common/TestImageUdder.h>
 
 #include <common/memory/SPSCFifo.h>
 #include <common/system/Socket.h>

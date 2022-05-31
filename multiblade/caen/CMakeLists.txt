@@ -32,12 +32,12 @@ set(DigitizerMappingTest_SRC
   DigitizerMappingTest.cpp)
 create_test_executable(DigitizerMappingTest)
 
-# Create excecutable for the test of geometry
-set(MBGeometryTest_INC
-  MBGeometry.h)
-set(MBGeometryTest_SRC
-  MBGeometryTest.cpp)
-create_test_executable(MBGeometryTest)
+# Create excecutable for the AMOR geometry
+set(AMORGeometryTest_INC
+  AMORGeometry.h)
+set(AMORGeometryTest_SRC
+  AMORGeometryTest.cpp)
+create_test_executable(AMORGeometryTest)
 
 # Create excecutable for test of configuration
 set(MBConfigTest_INC

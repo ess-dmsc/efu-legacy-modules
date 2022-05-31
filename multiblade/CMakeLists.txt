@@ -16,12 +16,13 @@ include_directories(.)
 # multiblade detector module and base test
 #=============================================================================
 set(caen_common_inc
+  caen/AMORGeometry.h
+  caen/Config.h
+  caen/DataParser.h
+  caen/Readout.h
+  clustering/EventBuilder.h
   MBCaenBase.h
   MBCaenInstrument.h
-  caen/Readout.h
-  caen/DataParser.h
-  clustering/EventBuilder.h
-  caen/Config.h
   )
 set(caen_common_src
   MBCaenBase.cpp

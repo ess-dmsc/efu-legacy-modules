@@ -52,13 +52,18 @@ public:
   bool filter_time_span{true};
   uint32_t filter_time_span_value{125};
 
-  int max_valid_adc{65534};
+  int MaxValidADC{65534};
 
   /// local readout timestamp resolution, ns per time tick
   uint32_t TimeTickNS{16};
 
   /// Specify the digital geometry
   std::shared_ptr<DigitizerMapping> Mappings;
+
+  bool CheckWireGap{true};
+  int MaxGapWire{0};
+  int MaxGapStrip{1};
+  uint32_t MaxTofNS{1'000'000'000}; // 1s
 
 private:
   /// \brief helper function to load and parse json file
