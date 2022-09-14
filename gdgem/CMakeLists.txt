@@ -61,14 +61,14 @@ target_compile_definitions(GdGemBaseTest
 # unit tests
 #=============================================================================
 
-set(NMXConfigTest_INC
+set(GdGEMConfigTest_INC
   NMXConfig.h
   srs/SRSTime.h
   srs/SRSMappings.h
   srs/CalibrationFile.cpp
   ${ESS_MODULE_DIR}/multigrid/reduction/ModuleGeometry.cpp
   )
-set(NMXConfigTest_SRC
+set(GdGEMConfigTest_SRC
   NMXConfigTest.cpp
   NMXConfig.cpp
   srs/SRSTime.cpp
@@ -76,6 +76,6 @@ set(NMXConfigTest_SRC
   srs/CalibrationFile.cpp
   ${ESS_MODULE_DIR}/multigrid/reduction/ModuleGeometry.h
   )
-create_test_executable(NMXConfigTest)
-target_compile_definitions(NMXConfigTest
+create_test_executable(GdGEMConfigTest)
+target_compile_definitions(GdGEMConfigTest
   PRIVATE TEST_JSON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/${TEST_JSON_PATH}/")
