@@ -197,6 +197,7 @@ void CAENBase::processing_thread() {
 
         uint64_t efu_time = 1000000000LU * (uint64_t)time(NULL); // ns since 1970
         events.pulseTime(efu_time);
+        monitor.pulseTime(efu_time);
 
         // \todo state some assumptions here
         if (not MBCaen.parseAndProcessPacket(dataptr, datalen, events)) {
@@ -215,7 +216,7 @@ void CAENBase::processing_thread() {
           // Wires  == Y == ClusterB
           for (int Cassette = 0; Cassette <= MBCaen.amorgeom.Cassette2D; Cassette++) {
             for (const auto &Event : MBCaen.builders[Cassette].Events) {
-              
+
               if (MBCaen.amorgeom.is1DDetector(Cassette)) {
                 Counters.Events1DDiscard++;
                 continue;
@@ -228,7 +229,7 @@ void CAENBase::processing_thread() {
                 Counters.EventsNoCoincidence++;
                 continue;
               }
-              
+
               // // Discard if there are gaps in the strip channels
               // if (Event.ClusterA.hits.size() < Event.ClusterA.coord_span()) {
               //   int StripGap = Event.ClusterA.coord_span() - Event.ClusterA.hits.size();
@@ -278,7 +279,7 @@ void CAENBase::processing_thread() {
               }
               auto pixel_id = MBCaen.essgeom.pixel2D(x, y);
               XTRACE(EVENT, DEB, "time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
-            
+
               if (pixel_id == 0) {
                 XTRACE(EVENT, DEB, "pixel error: time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
                 Counters.GeometryErrors++;
@@ -361,5 +362,3 @@ void CAENBase::processing_thread() {
     }
   }
 }
-
-
