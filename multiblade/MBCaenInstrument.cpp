@@ -60,8 +60,8 @@ bool MBCaenInstrument::parseAndProcessPacket(char * data, int length,  EV42Seria
   int res = parser.parse(data, length);
 
   counters.ReadoutsErrorBytes += parser.Stats.error_bytes;
-  counters.ReadoutsErrorVersion += parser.Stats.error_version;
-  counters.ReadoutsSeqErrors += parser.Stats.seq_errors;
+  counters.PacketsErrorVersion += parser.Stats.error_version;
+  counters.PacketsSeqErrors += parser.Stats.seq_errors;
 
   if (res < 0) {
     return false;
@@ -124,6 +124,7 @@ void MBCaenInstrument::FixJumpsAndSort(int DigitiserIndex, std::vector<Readout> 
   // Assume time gap detection and data sorting can be done
   // per digitizer and not per cassette.
   for (auto &Readout : vec) {
+
     int64_t Time = (uint64_t)(Readout.local_time * config.TimeTickNS);
 
     if ((PrevTime - Time) < Gap) {
@@ -132,25 +133,27 @@ void MBCaenInstrument::FixJumpsAndSort(int DigitiserIndex, std::vector<Readout> 
       XTRACE(CLUSTER, DEB, "Wrap: %4d, Time: %lld, PrevTime: %lld, diff %lld",
              counters.ReadoutsTimerWraps, Time, PrevTime, (PrevTime - Time));
       counters.ReadoutsTimerWraps++;
-      std::sort(temp.begin(), temp.end(), compareByTime);
+
       LoadAndProcessReadouts(DigitiserIndex, temp);
       temp.clear();
       temp.push_back(Readout);
     }
     PrevTime = Time;
   }
-  std::sort(temp.begin(), temp.end(), compareByTime);
   LoadAndProcessReadouts(DigitiserIndex, temp);
 }
 
 // Here readouts from the same digitizer can end up in different
 // builders - one per cassette
 void MBCaenInstrument::LoadAndProcessReadouts(int DigitiserIndex, std::vector<Readout> &vec) {
+  std::sort(vec.begin(), vec.end(), compareByTime);
   for (Readout &dp : vec) {
     int Cassette = getCassette(DigitiserIndex, dp.channel);
 
-    XTRACE(DATA, DEB, "time %u, channel %u, adc %u",
-           dp.local_time, dp.channel, dp.adc);
+    if (Cassette != 7) {
+    XTRACE(DATA, ALW, "digidx %u, time %u, channel %u, adc %u",
+           DigitiserIndex, dp.local_time, dp.channel, dp.adc);
+    }
 
     if (dp.local_time * config.TimeTickNS >= 0xffffffffULL) {
       counters.ReadoutsTOFLarge++;
@@ -228,15 +231,17 @@ void MBCaenInstrument::accept2DReadout(int Cassette, uint64_t Time, uint8_t Plan
 
 /// \brief discard x channels and adds each y readout to Hits1D vector
 void MBCaenInstrument::accept1DReadout(int Cassette, uint64_t Time, uint8_t Plane, uint16_t Channel, uint16_t Adc) {
-  XTRACE(DATA, DEB, "Processing 1D readout, Cassette %u, Time %u, Plane %u, Channel %u, Adc %u",
+  if (Cassette != 7) {
+  XTRACE(DATA, ALW, "Processing 1D readout, Cassette %u, Time %u, Plane %u, Channel %u, Adc %u",
                     Cassette, Time, Plane, Channel, Adc);
+  }
   if (Plane == 0) { // Plane 0 is strips readout and is invalid for 1D events
     XTRACE(DATA, DEB, "Strip readout in 1D mode, discarding");
     counters.ReadoutsDiscardStrips++;
     return;
   }
   if (Plane == 1) {
-    XTRACE(DATA, DEB, "Wire readout in 1D mode, adding to Hits1D vector");
+    //XTRACE(DATA, DEB, "Wire readout in 1D mode, adding to Hits1D vector");
     int coord = amorgeom.getYCoord(Cassette, Channel);
     Hits1D.push_back({Time, (uint16_t)coord, Adc, Plane});
     counters.Readouts1DY++;

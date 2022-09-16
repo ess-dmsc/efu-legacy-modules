@@ -7,21 +7,20 @@
 ///
 //===----------------------------------------------------------------------===//
 
-
 #include <cinttypes>
+#include <common/debug/Trace.h>
 #include <common/detector/EFUArgs.h>
 #include <common/kafka/EV42Serializer.h>
 #include <common/kafka/Producer.h>
-#include <common/debug/Trace.h>
 #include <common/time/TimeString.h>
 
 #include <unistd.h>
 
 #include <common/RuntimeStat.h>
-#include <common/system/Socket.h>
 #include <common/memory/SPSCFifo.h>
-#include <common/time/TimeString.h>
+#include <common/system/Socket.h>
 #include <common/time/TSCTimer.h>
+#include <common/time/TimeString.h>
 #include <common/time/Timer.h>
 #include <multiblade/MBCaenBase.h>
 #include <multiblade/MBCaenInstrument.h>
@@ -48,8 +47,8 @@ CAENBase::CAENBase(BaseSettings const &settings, struct CAENSettings &LocalMBCAE
   Stats.create("receive.fifo_seq_errors", Counters.FifoSeqErrors);
 
   Stats.create("headers.packet_bad_header", Counters.PacketBadDigitizer);
-  Stats.create("headers.error_version", Counters.ReadoutsErrorVersion);
-  Stats.create("headers.seq_errors", Counters.ReadoutsSeqErrors);
+  Stats.create("headers.error_version", Counters.PacketsErrorVersion);
+  Stats.create("headers.seq_errors", Counters.PacketsSeqErrors);
 
   Stats.create("readouts.count", Counters.ReadoutsCount);
   Stats.create("readouts.2D_x", Counters.Readouts2DX);
@@ -183,183 +182,184 @@ void CAENBase::processing_thread() {
   // Monitor these counters
   RuntimeStat RtStat({Counters.RxPackets, Counters.Events, Counters.TxBytes});
 
+  while (true) {
+    if (InputFifo.pop(data_index)) { // There is data in the FIFO - do processing
+      auto datalen = RxRingbuffer.getDataLength(data_index);
+      if (datalen == 0) {
+        Counters.FifoSeqErrors++;
+        continue;
+      }
 
-    while (true) {
-      if (InputFifo.pop(data_index)) { // There is data in the FIFO - do processing
-        auto datalen = RxRingbuffer.getDataLength(data_index);
-        if (datalen == 0) {
-          Counters.FifoSeqErrors++;
-          continue;
-        }
+      /// \todo use the Buffer<T> class here and in parser
+      auto dataptr = RxRingbuffer.getDataBuffer(data_index);
 
-        /// \todo use the Buffer<T> class here and in parser
-        auto dataptr = RxRingbuffer.getDataBuffer(data_index);
+      uint64_t efu_time = 1000000000LU * (uint64_t)time(NULL); // ns since 1970
+      events.pulseTime(efu_time);
+      monitor.pulseTime(efu_time);
 
-        uint64_t efu_time = 1000000000LU * (uint64_t)time(NULL); // ns since 1970
-        events.pulseTime(efu_time);
+      // \todo state some assumptions here
+      if (not MBCaen.parseAndProcessPacket(dataptr, datalen, events)) {
+        continue;
+      }
 
-        // \todo state some assumptions here
-        if (not MBCaen.parseAndProcessPacket(dataptr, datalen, events)) {
-          continue;
-        }
+      XTRACE(PROCESS, DEB, "Received %u monitor counts",
+             MBCaen.MonitorHits.size());
+      for (Hit &hit : MBCaen.MonitorHits) {
+        Counters.MonitorTxBytes += monitor.addEvent(hit.time, 1);
+      }
+      MBCaen.MonitorHits.clear();
 
-        XTRACE(PROCESS, DEB, "Received %u monitor counts", MBCaen.MonitorHits.size());
-        for (Hit & hit : MBCaen.MonitorHits) {
-          Counters.MonitorTxBytes += monitor.addEvent(hit.time, 1);
-        }
-        MBCaen.MonitorHits.clear();
+      // when alignment mode is active, process 2D events with event builders
+      if (MBCaen.ModuleSettings.Alignment) {
+        // Strips == X == ClusterA
+        // Wires  == Y == ClusterB
+        for (int Cassette = 0; Cassette <= MBCaen.amorgeom.Cassette2D; Cassette++) {
+          for (const auto &Event : MBCaen.builders[Cassette].Events) {
 
-        //when alignment mode is active, process 2D events with event builders
-        if(MBCaen.ModuleSettings.Alignment) {
-          // Strips == X == ClusterA
-          // Wires  == Y == ClusterB
-          for (int Cassette = 0; Cassette <= MBCaen.amorgeom.Cassette2D; Cassette++) {
-            for (const auto &Event : MBCaen.builders[Cassette].Events) {
-              
-              if (MBCaen.amorgeom.is1DDetector(Cassette)) {
-                Counters.Events1DDiscard++;
-                continue;
-              }
+            if (MBCaen.amorgeom.is1DDetector(Cassette)) {
+              Counters.Events1DDiscard++;
+              continue;
+            }
 
-              // 2D events must have coincidences for both planes, but not 1D
-              // This is only relevant for alignment mode and for 2D detectors
-              if (not Event.both_planes()) {
-                XTRACE(EVENT, INF, "No coincidence\n %s", Event.to_string({}, true).c_str());
-                Counters.EventsNoCoincidence++;
-                continue;
-              }
-              
-              // // Discard if there are gaps in the strip channels
-              // if (Event.ClusterA.hits.size() < Event.ClusterA.coord_span()) {
-              //   int StripGap = Event.ClusterA.coord_span() - Event.ClusterA.hits.size();
-              //   if (StripGap >= MBCaen.config.MaxGapStrip) {
-              //     Counters.EventsInvalidStripGap++;
-              //     continue;
-              //   }
-              // }
-              //
+            // 2D events must have coincidences for both planes, but not 1D
+            // This is only relevant for alignment mode and for 2D detectors
+            if (not Event.both_planes()) {
+              XTRACE(EVENT, INF, "No coincidence\n %s",
+                     Event.to_string({}, true).c_str());
+              Counters.EventsNoCoincidence++;
+              continue;
+            }
 
-              // Discard if there are gaps in the wire channels
-              if (MBCaen.config.CheckWireGap) {
-                if (Event.ClusterB.hits.size() < Event.ClusterB.coord_span()) {
-                  Counters.EventsWireGapCount++;
-                  int WireGap = Event.ClusterB.coord_span() - Event.ClusterB.hits.size();
-                  if (WireGap >= MBCaen.config.MaxGapWire) {
-                    Counters.EventsWireGapInvalid++;
-                    continue;
-                  }
+            // // Discard if there are gaps in the strip channels
+            // if (Event.ClusterA.hits.size() < Event.ClusterA.coord_span()) {
+            //   int StripGap = Event.ClusterA.coord_span() -
+            //   Event.ClusterA.hits.size(); if (StripGap >=
+            //   MBCaen.config.MaxGapStrip) {
+            //     Counters.EventsInvalidStripGap++;
+            //     continue;
+            //   }
+            // }
+            //
+
+            // Discard if there are gaps in the wire channels
+            if (MBCaen.config.CheckWireGap) {
+              if (Event.ClusterB.hits.size() < Event.ClusterB.coord_span()) {
+                Counters.EventsWireGapCount++;
+                int WireGap = Event.ClusterB.coord_span() - Event.ClusterB.hits.size();
+                if (WireGap >= MBCaen.config.MaxGapWire) {
+                  Counters.EventsWireGapInvalid++;
+                  continue;
                 }
               }
-
-              if (Event.ClusterB.hits.size() > 1) {
-                Counters.EventsWireMultTwoPlus++;
-              }
-
-              if (Event.ClusterB.hits.size() == 1) {
-                Counters.EventsWireMultSingle++;
-              }
-
-              XTRACE(EVENT, DEB, "Event Valid\n %s", Event.to_string({}, true).c_str());
-
-              uint16_t x{0};
-              uint16_t y{0};
-
-              if (MBCaen.ModuleSettings.Alignment) {
-                x = static_cast<uint16_t>(std::round(Event.ClusterA.coord_center()));
-              } else {
-                x = 0;
-              }
-              y = static_cast<uint16_t>(std::round(Event.ClusterB.coord_center()));
-
-              // Calculate event (t, pix)
-              uint64_t time = Event.time_start();
-              if (time > MBCaen.config.MaxTofNS) {
-                Counters.EventsMaxTofNS++;
-              }
-              auto pixel_id = MBCaen.essgeom.pixel2D(x, y);
-              XTRACE(EVENT, DEB, "time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
-            
-              if (pixel_id == 0) {
-                XTRACE(EVENT, DEB, "pixel error: time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
-                Counters.GeometryErrors++;
-              } else {
-                Counters.TxBytes += events.addEvent(time, pixel_id);
-                Counters.Events++;
-                Counters.Events2D++;
-              }
             }
-            MBCaen.builders[Cassette].Events.clear(); // else events will accumulate
-          }
-        } // interate over builders
-        else { //when alignment mode isn't used, process 1D events directly per wire readout
-          XTRACE(EVENT, DEB, "processing %u 1D events", MBCaen.Hits1D.size());
-          // /// Attempt to use all 1D hits as events
-          for (Hit & h1d : MBCaen.Hits1D) {
-            uint16_t x{0};
-            uint16_t y = h1d.coordinate;
+
+            if (Event.ClusterB.hits.size() > 1) {
+              Counters.EventsWireMultTwoPlus++;
+            }
+
+            if (Event.ClusterB.hits.size() == 1) {
+              Counters.EventsWireMultSingle++;
+            }
+
+            XTRACE(EVENT, DEB, "Event Valid\n %s",
+                   Event.to_string({}, true).c_str());
+
+            uint16_t x = static_cast<uint16_t>(std::round(Event.ClusterA.coord_center()));
+            uint16_t y = static_cast<uint16_t>(std::round(Event.ClusterB.coord_center()));
+
+            // Calculate event (t, pix)
+            uint64_t time = Event.time_start();
+            if (time > MBCaen.config.MaxTofNS) {
+              Counters.EventsMaxTofNS++;
+            }
             auto pixel_id = MBCaen.essgeom.pixel2D(x, y);
-            uint64_t time = h1d.time;
+            XTRACE(EVENT, DEB, "time: %u, x %u, y %u, pixel %u", time, x, y,
+                   pixel_id);
+
             if (pixel_id == 0) {
-                XTRACE(EVENT, DEB, "pixel error: time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
-                Counters.GeometryErrors++;
-              } else {
-                XTRACE(EVENT, DEB, "valid event: time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
-                Counters.TxBytes += events.addEvent(time, pixel_id);
-                Counters.Events++;
-                Counters.Events1D++;
-              }
+              XTRACE(EVENT, DEB, "pixel error: time: %u, x %u, y %u, pixel %u",
+                     time, x, y, pixel_id);
+              Counters.GeometryErrors++;
+            } else {
+              Counters.TxBytes += events.addEvent(time, pixel_id);
+              Counters.Events++;
+              Counters.Events2D++;
+            }
           }
-          MBCaen.Hits1D.clear();
+          MBCaen.builders[Cassette]
+              .Events.clear(); // else events will accumulate
         }
-      } else {
-        // There is NO data in the FIFO - do stop checks and sleep a little
-        Counters.ProcessingIdle++;
-        usleep(10);
-      }
-
-
-
-      // if filedumping and requesting time splitting, check for rotation.
-      if (MBCAENSettings.H5SplitTime != 0 and (MBCaen.dumpfile)) {
-        if (h5flushtimer.timeus() >= MBCAENSettings.H5SplitTime * 1000000) {
-
-          /// \todo user should not need to call flush() - implicit in rotate() ?
-          MBCaen.dumpfile->flush();
-          MBCaen.dumpfile->rotate();
-          h5flushtimer.reset();
+      }      // iterate over builders
+      else { // when alignment mode isn't used, process 1D events directly per
+             // wire readout
+        XTRACE(EVENT, DEB, "processing %u 1D events", MBCaen.Hits1D.size());
+        // /// Attempt to use all 1D hits as events
+        for (Hit &h1d : MBCaen.Hits1D) {
+         uint16_t x{0};
+         uint16_t y = h1d.coordinate;
+         auto pixel_id = MBCaen.essgeom.pixel2D(x, y);
+         uint64_t time = h1d.time;
+         if (pixel_id == 0) {
+           XTRACE(EVENT, DEB, "pixel error: time: %u, x %u, y %u, pixel %u",
+                  time, x, y, pixel_id);
+           Counters.GeometryErrors++;
+         } else {
+           XTRACE(EVENT, DEB, "valid event: time: %u, x %u, y %u, pixel %u",
+                  time, x, y, pixel_id);
+           Counters.TxBytes += events.addEvent(time, pixel_id);
+           Counters.Events++;
+           Counters.Events1D++;
+         }
         }
+        MBCaen.Hits1D.clear();
+      }
+    } else {
+      // There is NO data in the FIFO - do stop checks and sleep a little
+      Counters.ProcessingIdle++;
+      usleep(10);
+    }
+
+    // if filedumping and requesting time splitting, check for rotation.
+    if (MBCAENSettings.H5SplitTime != 0 and (MBCaen.dumpfile)) {
+      if (h5flushtimer.timeus() >= MBCAENSettings.H5SplitTime * 1000000) {
+
+        /// \todo user should not need to call flush() - implicit in rotate() ?
+        MBCaen.dumpfile->flush();
+        MBCaen.dumpfile->rotate();
+        h5flushtimer.reset();
+      }
+    }
+
+    if (produce_timer.timeout()) {
+
+      RuntimeStatusMask = RtStat.getRuntimeStatusMask(
+          {Counters.RxPackets, Counters.Events, Counters.TxBytes});
+
+      Counters.TxBytes += events.produce();
+      Counters.MonitorTxBytes += monitor.produce();
+
+      if (!MBCaen.histograms.isEmpty()) {
+        // XTRACE(PROCESS, INF, "Sending histogram for %zu readouts",
+        //   histograms.hit_count());
+        MBCaen.histfb.produce(MBCaen.histograms);
+        MBCaen.histograms.clear();
       }
 
-      if (produce_timer.timeout()) {
+      /// Kafka stats update - common to all detectors
+      /// don't increment as producer keeps absolute count
+      Counters.kafka_produce_fails = eventprod.stats.produce_fails;
+      Counters.kafka_ev_errors = eventprod.stats.ev_errors;
+      Counters.kafka_ev_others = eventprod.stats.ev_others;
+      Counters.kafka_dr_errors = eventprod.stats.dr_errors;
+      Counters.kafka_dr_noerrors = eventprod.stats.dr_noerrors;
+    }
 
-        RuntimeStatusMask =  RtStat.getRuntimeStatusMask({Counters.RxPackets, Counters.Events, Counters.TxBytes});
-
-        Counters.TxBytes += events.produce();
-        Counters.MonitorTxBytes += monitor.produce();
-
-        if (!MBCaen.histograms.isEmpty()) {
-          // XTRACE(PROCESS, INF, "Sending histogram for %zu readouts",
-          //   histograms.hit_count());
-          MBCaen.histfb.produce(MBCaen.histograms);
-          MBCaen.histograms.clear();
-        }
-
-        /// Kafka stats update - common to all detectors
-        /// don't increment as producer keeps absolute count
-        Counters.kafka_produce_fails = eventprod.stats.produce_fails;
-        Counters.kafka_ev_errors = eventprod.stats.ev_errors;
-        Counters.kafka_ev_others = eventprod.stats.ev_others;
-        Counters.kafka_dr_errors = eventprod.stats.dr_errors;
-        Counters.kafka_dr_noerrors = eventprod.stats.dr_noerrors;
-      }
-
-      if (not runThreads) {
-        // \todo flush everything here
-        XTRACE(INPUT, ALW, "Stopping processing thread.");
-        return;
-      }
+    if (not runThreads) {
+      // \todo flush everything here
+      XTRACE(INPUT, ALW, "Stopping processing thread.");
+      return;
     }
   }
 }
 
-
+} // namespace Multiblade
