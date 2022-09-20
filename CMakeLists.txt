@@ -8,6 +8,7 @@ add_subdirectory(gdgem)
 add_subdirectory(multiblade)
 add_subdirectory(sonde)
 add_subdirectory(jalousie)
+add_subdirectory(adc_readout)
 
 
 # Example functionality below to add custom targets to run the efu with different modules
