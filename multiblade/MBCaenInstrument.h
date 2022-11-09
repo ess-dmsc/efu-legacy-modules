@@ -27,10 +27,10 @@ namespace Multiblade {
 
 class MBCaenInstrument {
 public:
-
+BaseSettings &Settings;
 /// \brief 'create' the Multiblade instrument
 ///
-MBCaenInstrument(Counters & counters, BaseSettings & EFUSettings, CAENSettings & moduleSettings);
+MBCaenInstrument(Counters & counters, BaseSettings & EFUSettings);
 
 ///
 bool parseAndProcessPacket(char * data, int length, EV42Serializer & ev42ser);
@@ -69,7 +69,7 @@ void accept1DReadout(int Cassette, uint64_t Time, uint8_t Plane, uint16_t Channe
 public:
   /// \brief Stuff that 'ties' Multiblade together
   struct Counters & counters;
-  CAENSettings & ModuleSettings;
+  //CAENSettings & ModuleSettings;
 
   ///
   uint16_t ncass;

@@ -9,6 +9,7 @@
 
 #include <common/debug/Log.h>
 #include <common/debug/Trace.h>
+#include <common/kafka/KafkaConfig.h>
 #include <common/time/TimeString.h>
 #include <multiblade/MBCaenInstrument.h>
 
@@ -19,17 +20,15 @@ namespace Multiblade {
 
 /// \brief load configuration and calibration files
 MBCaenInstrument::MBCaenInstrument(struct Counters & counters,
-    BaseSettings & EFUSettings,
-    CAENSettings &moduleSettings)
-      : counters(counters)
-      , ModuleSettings(moduleSettings) {
-
+    BaseSettings & EFUSettings)
+      : Settings(EFUSettings)
+      , counters(counters) {
 
     // Setup Instrument according to configuration file
-    config = Config(ModuleSettings.ConfigFile);
+    config = Config(EFUSettings.ConfigFile);
 
-    if (!moduleSettings.FilePrefix.empty()) {
-      dumpfile = ReadoutFile::create(moduleSettings.FilePrefix + "-" + timeString());
+    if (!EFUSettings.DumpFilePrefix.empty()) {
+      dumpfile = ReadoutFile::create(EFUSettings.DumpFilePrefix + "-" + timeString());
     }
 
     ncass = 11;
@@ -42,9 +41,10 @@ MBCaenInstrument::MBCaenInstrument(struct Counters & counters,
       builder.setTimeBox(2010);
     }
 
+    KafkaConfig KafkaCfg(EFUSettings.KafkaConfigFile);
     // Kafka producers and flatbuffer serialisers
     // Monitor producer
-    Producer monitorprod(EFUSettings.KafkaBroker, monitor);
+    Producer monitorprod(EFUSettings.KafkaBroker, monitor, KafkaCfg.CfgParms);
     auto ProduceHist = [&monitorprod](auto DataBuffer, auto Timestamp) {
       monitorprod.produce(DataBuffer, Timestamp);
     };
@@ -194,7 +194,7 @@ void MBCaenInstrument::handleDetectorReadout(int Cassette, Readout & dp, uint64_
 
   uint8_t plane = amorgeom.getPlane(Cassette, dp.channel);
 
-  if (ModuleSettings.Alignment) {
+  if (Settings.MultibladeAlignment) {
     accept2DReadout(Cassette, Time, plane, dp.channel, dp.adc);
   } else {
     accept1DReadout(Cassette, Time, plane, dp.channel, dp.adc);

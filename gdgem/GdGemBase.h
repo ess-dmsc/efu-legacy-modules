@@ -22,22 +22,18 @@ const unsigned int MinNMXChannel{0};
 const unsigned int MaxNMXChannel{1279};
 const unsigned int ZeroNMXOverlapSize{0};
 
-struct NMXSettings {
-  std::string ConfigFile;
-  std::string CalibrationFile;
-  std::string FilePrefix;
-
+struct {
   // Parameters to handle detector partition (in x) with overlap region
   unsigned int PMin{MinNMXChannel};
   unsigned int PMax{MaxNMXChannel};
   unsigned int PWidth{ZeroNMXOverlapSize};
-};
+} NMXSettings;
 
 
 
 class GdGemBase : public Detector {
 public:
-  GdGemBase(BaseSettings const & settings, NMXSettings & LocalSettings);
+  GdGemBase(BaseSettings const & settings);
 
   /// \brief detector specific threads
   void inputThread();
@@ -47,7 +43,6 @@ public:
   int getCalibration(std::vector<std::string> cmdargs, char *output,
                      unsigned int *obytes);
 protected:
-  struct NMXSettings NMXSettings;
   Gem::NMXConfig NMXOpts;
 
   std::shared_ptr<Gem::AbstractBuilder> builder_;

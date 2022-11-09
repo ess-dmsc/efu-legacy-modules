@@ -14,18 +14,18 @@
 
 namespace Multiblade {
 
-struct CAENSettings {
-  std::string FilePrefix{""};
-  std::string ConfigFile{""};
-  uint32_t H5SplitTime{0}; // split files every N seconds (0 is inactive)
-  bool Alignment{false}; // operations mode (1D) or alignment mode (2D)
-};
+// struct CAENSettings {
+//   std::string FilePrefix{""};
+//   std::string ConfigFile{""};
+//   uint32_t H5SplitTime{0}; // split files every N seconds (0 is inactive)
+//   bool Alignment{false}; // operations mode (1D) or alignment mode (2D)
+// };
 
 
 
 class CAENBase : public Detector {
 public:
-  CAENBase(BaseSettings const &settings, struct CAENSettings &LocalMBCAENSettings);
+  CAENBase(BaseSettings const &settings);
   ~CAENBase() = default;
 
   void input_thread();
@@ -33,7 +33,6 @@ public:
 
 protected:
   struct Counters Counters;
-  CAENSettings MBCAENSettings;
 };
 
 }

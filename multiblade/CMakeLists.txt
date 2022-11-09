@@ -34,8 +34,13 @@ set(caen_common_src
   )
 
 set(mbcaen_INC ${caen_common_inc})
-set(mbcaen_SRC MBCaen.cpp ${caen_common_src})
-create_module(mbcaen)
+set(mbcaen_SRC
+  ${caen_common_src}
+  main.cpp
+  )
+set(mbcaen_LIB efu_reduction)
+create_executable(mbcaen)
+add_dependencies(mbcaen efu_reduction)
 
 #
 set(MBCAENBaseTest_INC

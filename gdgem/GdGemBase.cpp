@@ -18,6 +18,7 @@
 #include <gdgem/generators/BuilderHits.h>
 #include <gdgem/generators/BuilderReadouts.h>
 #include <common/kafka/EV42Serializer.h>
+#include <common/kafka/KafkaConfig.h>
 #include <common/monitor/HistogramSerializer.h>
 #include <common/kafka/Producer.h>
 #include <efu/Server.h>
@@ -61,13 +62,13 @@ int GdGemBase::getCalibration(std::vector<std::string> CmdArgs,
   return Parser::OK;
 }
 
-GdGemBase::GdGemBase(BaseSettings const &Settings, struct NMXSettings &LocalSettings) :
-       Detector("NMX", Settings), NMXSettings(LocalSettings) {
+GdGemBase::GdGemBase(BaseSettings const &Settings) :
+       Detector("NMX", Settings) {
 
   Stats.setPrefix(EFUSettings.GraphitePrefix, EFUSettings.GraphiteRegion);
 
-  LOG(INIT, Sev::Info, "NMX Config file: {}", NMXSettings.ConfigFile);
-  NMXOpts = Gem::NMXConfig(NMXSettings.ConfigFile, NMXSettings.CalibrationFile);
+  LOG(INIT, Sev::Info, "NMX Config file: {}", EFUSettings.ConfigFile);
+  NMXOpts = Gem::NMXConfig(EFUSettings.ConfigFile, EFUSettings.CalibFile);
 
   LOG(INIT, Sev::Info, "Adding stats");
   // clang-format off
@@ -141,9 +142,9 @@ GdGemBase::GdGemBase(BaseSettings const &Settings, struct NMXSettings &LocalSett
 
   // clang-format on
 
-  if (!NMXSettings.FilePrefix.empty())
+  if (!EFUSettings.DumpFilePrefix.empty())
     LOG(INIT, Sev::Info, "Dump h5 data in path: {}",
-           NMXSettings.FilePrefix);
+           EFUSettings.DumpFilePrefix);
 
   std::function<void()> inputFunc = [this]() { GdGemBase::inputThread(); };
   Detector::AddThreadFunction(inputFunc, "input");
@@ -222,7 +223,7 @@ void GdGemBase::applyConfiguration() {
     builder_ = std::make_shared<Gem::BuilderVMM3>(
         NMXOpts.time_config, NMXOpts.srs_mappings,
         NMXOpts.adc_threshold,
-        NMXSettings.FilePrefix,
+        EFUSettings.DumpFilePrefix,
         NMXSettings.PMin,
         NMXSettings.PMax,
         NMXSettings.PWidth,
@@ -232,7 +233,7 @@ void GdGemBase::applyConfiguration() {
     builder_ = std::make_shared<Gem::BuilderReadouts>(
         NMXOpts.srs_mappings,
         NMXOpts.adc_threshold,
-        NMXSettings.FilePrefix);
+        EFUSettings.DumpFilePrefix);
 
   } else if (NMXOpts.builder_type == "Hits") {
     builder_ = std::make_shared<Gem::BuilderHits>();
@@ -397,9 +398,10 @@ void GdGemBase::processingThread() {
     // \todo this only exits this thread, but EFU continues running
   }
 
-  Producer EventProducer(EFUSettings.KafkaBroker, "nmx_detector");
-  Producer MonitorProducer(EFUSettings.KafkaBroker, "nmx_monitor");
-  Producer HitsProducer(EFUSettings.KafkaBroker, "nmx_hits");
+  KafkaConfig KafkaCfg(EFUSettings.KafkaConfigFile);
+  Producer EventProducer(EFUSettings.KafkaBroker, "nmx_detector", KafkaCfg.CfgParms);
+  Producer MonitorProducer(EFUSettings.KafkaBroker, "nmx_monitor", KafkaCfg.CfgParms);
+  Producer HitsProducer(EFUSettings.KafkaBroker, "nmx_hits", KafkaCfg.CfgParms);
 
   auto ProduceEvents = [&EventProducer](auto DataBuffer, auto Timestamp) {
     EventProducer.produce(DataBuffer, Timestamp);

@@ -6,6 +6,8 @@ add_subdirectory(generators)
 
 get_filename_component(TEST_JSON_PATH "configs/vmm3.json" DIRECTORY)
 
+include_directories(.)
+
 #=============================================================================
 # gdgem detector module and base test
 #=============================================================================
@@ -39,10 +41,16 @@ set(pipeline_common_src
   generators/BuilderReadouts.cpp
   generators/BuilderHits.cpp
   )
-set(gdgem_SRC GdGem.cpp ${GdGemBase_SRC} ${pipeline_common_src})
-set(gdgem_INC ${pipeline_common_inc})
-create_module(gdgem)
 
+set(gdgem_SRC main.cpp ${GdGemBase_SRC}
+  ${pipeline_common_src})
+set(gdgem_INC ${pipeline_common_inc})
+set(gdgem_LIB
+  efu_reduction
+  efu_essreadout
+  )
+create_executable(gdgem)
+add_dependencies(gdgem efu_reduction efu_essreadout)
 #
 set(GdGemBaseTest_INC
   ${pipeline_common_inc}

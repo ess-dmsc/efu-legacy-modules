@@ -12,6 +12,7 @@
 #include <common/detector/EFUArgs.h>
 #include <common/kafka/EV42Serializer.h>
 #include <common/kafka/Producer.h>
+#include <common/kafka/KafkaConfig.h>
 #include <common/debug/Trace.h>
 #include <common/time/TimeString.h>
 
@@ -34,8 +35,8 @@ namespace Multiblade {
 
 const char *classname = "Multiblade detector with CAEN readout";
 
-CAENBase::CAENBase(BaseSettings const &settings, struct CAENSettings &LocalMBCAENSettings)
-    : Detector("MBCAEN", settings), MBCAENSettings(LocalMBCAENSettings) {
+CAENBase::CAENBase(BaseSettings const &settings)
+    : Detector("MBCAEN", settings) {
 
   Stats.setPrefix(EFUSettings.GraphitePrefix, EFUSettings.GraphiteRegion);
 
@@ -161,17 +162,18 @@ void CAENBase::input_thread() {
 
 void CAENBase::processing_thread() {
 
-  MBCaenInstrument MBCaen(Counters, EFUSettings, MBCAENSettings);
+  MBCaenInstrument MBCaen(Counters, EFUSettings);
 
-  // Event producer
-  Producer eventprod(EFUSettings.KafkaBroker, MBCaen.topic);
+  KafkaConfig KafkaCfg(EFUSettings.KafkaConfigFile);
+  Producer eventprod(EFUSettings.KafkaBroker, MBCaen.topic, KafkaCfg.CfgParms);
+
   auto Produce = [&eventprod](auto DataBuffer, auto Timestamp) {
     eventprod.produce(DataBuffer, Timestamp);
   };
   EV42Serializer events{KafkaBufferSize, "multiblade", Produce};
 
   // Event producer
-  Producer monprod(EFUSettings.KafkaBroker, "amor_beam_monitor");
+  Producer monprod(EFUSettings.KafkaBroker, "amor_beam_monitor", KafkaCfg.CfgParms);
   auto ProduceII = [&monprod](auto DataBuffer, auto Timestamp) {
     monprod.produce(DataBuffer, Timestamp);
   };
@@ -211,7 +213,7 @@ void CAENBase::processing_thread() {
         MBCaen.MonitorHits.clear();
 
         //when alignment mode is active, process 2D events with event builders
-        if(MBCaen.ModuleSettings.Alignment) {
+        if(EFUSettings.MultibladeAlignment) {
           // Strips == X == ClusterA
           // Wires  == Y == ClusterB
           for (int Cassette = 0; Cassette <= MBCaen.amorgeom.Cassette2D; Cassette++) {
@@ -265,7 +267,7 @@ void CAENBase::processing_thread() {
               uint16_t x{0};
               uint16_t y{0};
 
-              if (MBCaen.ModuleSettings.Alignment) {
+              if (EFUSettings.MultibladeAlignment) {
                 x = static_cast<uint16_t>(std::round(Event.ClusterA.coord_center()));
               } else {
                 x = 0;
@@ -321,15 +323,15 @@ void CAENBase::processing_thread() {
 
 
       // if filedumping and requesting time splitting, check for rotation.
-      if (MBCAENSettings.H5SplitTime != 0 and (MBCaen.dumpfile)) {
-        if (h5flushtimer.timeus() >= MBCAENSettings.H5SplitTime * 1000000) {
-
-          /// \todo user should not need to call flush() - implicit in rotate() ?
-          MBCaen.dumpfile->flush();
-          MBCaen.dumpfile->rotate();
-          h5flushtimer.reset();
-        }
-      }
+      // if (MBCAENSettings.H5SplitTime != 0 and (MBCaen.dumpfile)) {
+      //   if (h5flushtimer.timeus() >= MBCAENSettings.H5SplitTime * 1000000) {
+      //
+      //     /// \todo user should not need to call flush() - implicit in rotate() ?
+      //     MBCaen.dumpfile->flush();
+      //     MBCaen.dumpfile->rotate();
+      //     h5flushtimer.reset();
+      //   }
+      // }
 
       if (produce_timer.timeout()) {
 
