@@ -6,12 +6,12 @@
 //===----------------------------------------------------------------------===//
 
 #include <efu/MainProg.h>
-#include <MBCaenBase.h>
+#include <JalousieBase.h>
 
 int main(int argc, char * argv[]) {
-  MainProg Main("mbcaen", argc, argv);
+  MainProg Main("jalousie", argc, argv);
 
-  auto Detector = new Multiblade::CAENBase(Main.DetectorSettings);
+  auto Detector = new Jalousie::JalousieBase(Main.DetectorSettings);
 
   return Main.run(Detector);
 }

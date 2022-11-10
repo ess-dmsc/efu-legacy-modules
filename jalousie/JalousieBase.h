@@ -14,15 +14,9 @@
 
 namespace Jalousie {
 
-struct CLISettings {
-  std::string ConfigFile;
-};
-
-
-
 class JalousieBase : public Detector {
 public:
-  explicit JalousieBase(BaseSettings const &settings, CLISettings const &LocalSettings);
+  explicit JalousieBase(BaseSettings const &settings);
   ~JalousieBase() = default;
   void inputThread();
   void processingThread();
@@ -58,7 +52,6 @@ protected:
     int64_t kafka_dr_noerrors;
   } __attribute__((aligned(64))) Counters;
 
-  CLISettings ModuleSettings;
   Config config;
   uint64_t previous_time{0}; /// < for timing error checks
 

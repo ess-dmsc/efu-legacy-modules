@@ -10,6 +10,7 @@
 #include <jalousie/Readout.h>
 #include <common/detector/EFUArgs.h>
 #include <common/kafka/Producer.h>
+#include <common/kafka/KafkaConfig.h>
 #include <common/RuntimeStat.h>
 #include <common/time/TimeString.h>
 
@@ -32,8 +33,8 @@ namespace Jalousie {
 const char *classname = "Jalousie detector";
 
 
-JalousieBase::JalousieBase(BaseSettings const &settings, CLISettings const &LocalSettings)
-    : Detector("JALOUSIE", settings), ModuleSettings(LocalSettings) {
+JalousieBase::JalousieBase(BaseSettings const &settings)
+    : Detector("JALOUSIE", settings) {
 
   Stats.setPrefix(EFUSettings.GraphitePrefix, EFUSettings.GraphiteRegion);
 
@@ -186,11 +187,12 @@ void JalousieBase::force_produce_and_update_kafka_stats(
 }
 
 void JalousieBase::processingThread() {
-  LOG(INIT, Sev::Info, "Jalousie Config file: {}", ModuleSettings.ConfigFile);
-  config = Config(ModuleSettings.ConfigFile);
+  LOG(INIT, Sev::Info, "Jalousie Config file: {}", EFUSettings.ConfigFile);
+  config = Config(EFUSettings.ConfigFile);
   LOG(INIT, Sev::Info, "Jalousie Config\n{}", config.debug());
 
-  Producer EventProducer(EFUSettings.KafkaBroker, "dream_detector");
+  KafkaConfig KafkaCfg(EFUSettings.KafkaConfigFile);
+  Producer EventProducer(EFUSettings.KafkaBroker, "dream_detector", KafkaCfg.CfgParms);
 
   auto Produce = [&EventProducer](auto DataBuffer, auto Timestamp) {
     EventProducer.produce(DataBuffer, Timestamp);

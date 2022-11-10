@@ -40,8 +40,8 @@
 
 class CAENBaseStandIn : public Multiblade::CAENBase {
 public:
-  CAENBaseStandIn(BaseSettings Settings, struct Multiblade::CAENSettings ReadoutSettings)
-      : Multiblade::CAENBase(Settings, ReadoutSettings){};
+  CAENBaseStandIn(BaseSettings Settings)
+      : Multiblade::CAENBase(Settings){};
   ~CAENBaseStandIn() = default;
   using Detector::Threads;
   using Multiblade::CAENBase::Counters;
@@ -50,24 +50,23 @@ public:
 class CAENBaseTest : public ::testing::Test {
 public:
   void SetUp() override {
-    LocalSettings.ConfigFile = "MB18Estia.json";
+    Settings.ConfigFile = "MB18Estia.json";
     Settings.RxSocketBufferSize = 100000;
     Settings.NoHwCheck = true;
   }
   void TearDown() override {}
 
   BaseSettings Settings;
-  Multiblade::CAENSettings LocalSettings;
 };
 
 TEST_F(CAENBaseTest, Constructor) {
-  CAENBaseStandIn Readout(Settings, LocalSettings);
+  CAENBaseStandIn Readout(Settings);
   EXPECT_EQ(Readout.Counters.RxPackets, 0);
 }
 
 
 TEST_F(CAENBaseTest, DataReceive) {
-  CAENBaseStandIn Readout(Settings, LocalSettings);
+  CAENBaseStandIn Readout(Settings);
   Readout.startThreads();
   std::chrono::duration<std::int64_t, std::milli> SleepTime{400};
   std::this_thread::sleep_for(SleepTime);

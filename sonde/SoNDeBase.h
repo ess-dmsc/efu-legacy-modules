@@ -1,4 +1,4 @@
-// Copyright (C) 2018-2020 European Spallation Source, ERIC. See LICENSE file
+// Copyright (C) 2018-2022 European Spallation Source, ERIC. See LICENSE file
 //===----------------------------------------------------------------------===//
 ///
 /// \file
@@ -15,17 +15,11 @@
 //#undef TRC_LEVEL
 //#define TRC_LEVEL TRC_L_DEB
 
-struct SoNDeSettings {
-  std::string fileprefix{""};
-};
-
-
-
 /** ----------------------------------------------------- */
 
 class SONDEIDEABase : public Detector {
 public:
-  explicit SONDEIDEABase(BaseSettings const & settings, SoNDeSettings & localSoNDeSettings);
+  explicit SONDEIDEABase(BaseSettings const & settings);
   ~SONDEIDEABase() = default;
 
   void input_thread();
@@ -59,6 +53,4 @@ protected:
     int64_t kafka_dr_errors;
     int64_t kafka_dr_noerrors;
   } __attribute__((aligned(64))) mystats;
-
-  struct SoNDeSettings SoNDeSettings;
 };

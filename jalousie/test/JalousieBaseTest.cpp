@@ -17,8 +17,8 @@
 
 class JalousieBaseStandIn : public Jalousie::JalousieBase {
 public:
-  JalousieBaseStandIn(BaseSettings Settings, struct Jalousie::CLISettings LocalJalousieSettings)
-      : Jalousie::JalousieBase(Settings, LocalJalousieSettings){};
+  JalousieBaseStandIn(BaseSettings Settings)
+      : Jalousie::JalousieBase(Settings){};
   ~JalousieBaseStandIn() = default;
   using Detector::Threads;
   using Jalousie::JalousieBase::Counters;
@@ -29,21 +29,20 @@ public:
   void SetUp() override {
     Settings.RxSocketBufferSize = 100000;
     Settings.NoHwCheck = true;
-    LocalSettings.ConfigFile = TEST_JSON_PATH "v20_mappings.json";
+    Settings.ConfigFile = TEST_JSON_PATH "v20_mappings.json";
   }
   void TearDown() override {}
 
   BaseSettings Settings;
-  Jalousie::CLISettings LocalSettings;
 };
 
 TEST_F(JalousieBaseTest, Constructor) {
-  JalousieBaseStandIn Jalousie(Settings, LocalSettings);
+  JalousieBaseStandIn Jalousie(Settings);
   EXPECT_EQ(Jalousie.Counters.RxPackets, 0);
 }
 
 TEST_F(JalousieBaseTest, DataReceive) {
-  JalousieBaseStandIn Jalousie(Settings, LocalSettings);
+  JalousieBaseStandIn Jalousie(Settings);
   Jalousie.startThreads();
   std::chrono::duration<std::int64_t, std::milli> SleepTime{400};
   std::this_thread::sleep_for(SleepTime);

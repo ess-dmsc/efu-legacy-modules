@@ -14,8 +14,8 @@
 
 class SONDEIDEABaseStandIn : public SONDEIDEABase {
 public:
-  SONDEIDEABaseStandIn(BaseSettings Settings, struct SoNDeSettings ReadoutSettings)
-      : SONDEIDEABase(Settings, ReadoutSettings){};
+  SONDEIDEABaseStandIn(BaseSettings Settings)
+      : SONDEIDEABase(Settings){};
   ~SONDEIDEABaseStandIn() {};
   using Detector::Threads;
   using SONDEIDEABase::mystats;
@@ -26,23 +26,22 @@ public:
   void SetUp() override {
     Settings.RxSocketBufferSize = 100000;
     Settings.NoHwCheck = true;
-    LocalSettings.fileprefix = "sonde_";
+    Settings.DumpFilePrefix = "sonde_";
   }
   void TearDown() override {}
 
   BaseSettings Settings;
-  SoNDeSettings LocalSettings;
 };
 
 TEST_F(SoNDeBaseTest, Constructor) {
-  SONDEIDEABaseStandIn Readout(Settings, LocalSettings);
+  SONDEIDEABaseStandIn Readout(Settings);
   EXPECT_EQ(Readout.mystats.rx_packets, 0);
   EXPECT_EQ(Readout.mystats.rx_events, 0);
   EXPECT_EQ(Readout.mystats.tx_bytes, 0);
 }
 
 TEST_F(SoNDeBaseTest, DataReceive) {
-  SONDEIDEABaseStandIn Readout(Settings, LocalSettings);
+  SONDEIDEABaseStandIn Readout(Settings);
   Readout.startThreads();
   std::chrono::duration<std::int64_t, std::milli> SleepTime{400};
   std::this_thread::sleep_for(SleepTime);

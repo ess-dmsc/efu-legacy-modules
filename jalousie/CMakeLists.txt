@@ -10,6 +10,15 @@ include_directories(.)
 set(jalousie_common_inc Config.h Readout.h SumoMappings.h rapidcsv.h)
 set(jalousie_common_src Config.cpp Readout.cpp SumoMappings.cpp)
 
-set(jalousie_INC JalousieBase.h ${jalousie_common_inc})
-set(jalousie_SRC JalousieBase.cpp Jalousie.cpp ${jalousie_common_src})
-create_module(jalousie)
+set(jalousie_INC
+  ${jalousie_common_inc}
+  JalousieBase.h
+  )
+set(jalousie_SRC
+  ${jalousie_common_src}
+  JalousieBase.cpp
+  main.cpp
+  )
+set(jalousie_LIB efu_reduction)
+create_executable(jalousie)
+add_dependencies(jalousie efu_reduction)

@@ -12,8 +12,8 @@
 
 class GdGemBaseStandIn : public GdGemBase {
 public:
-  GdGemBaseStandIn(BaseSettings Settings, struct NMXSettings ReadoutSettings)
-      : GdGemBase(Settings, ReadoutSettings){};
+  GdGemBaseStandIn(BaseSettings Settings)
+      : GdGemBase(Settings){};
   ~GdGemBaseStandIn() = default;
   using Detector::Threads;
   using GdGemBase::stats_;
@@ -22,25 +22,24 @@ public:
 class GdGemBaseTest : public TestBase {
 public:
   void SetUp() override {
-    LocalSettings.ConfigFile = TEST_JSON_PATH "vmm3.json";
+    Settings.ConfigFile = TEST_JSON_PATH "vmm3.json";
     Settings.RxSocketBufferSize = 100000;
     Settings.NoHwCheck = true;
   }
   void TearDown() override {}
 
   BaseSettings Settings;
-  NMXSettings LocalSettings;
 };
 
 TEST_F(GdGemBaseTest, Constructor) {
-  GdGemBaseStandIn Readout(Settings, LocalSettings);
+  GdGemBaseStandIn Readout(Settings);
   EXPECT_EQ(Readout.stats_.RxPackets, 0);
 }
 
 // \todo this needs to be redone using the reference binary
 
 TEST_F(GdGemBaseTest, GetCalibrationCmd) {
-  GdGemBaseStandIn Readout(Settings, LocalSettings);
+  GdGemBaseStandIn Readout(Settings);
   const int OutputSize = 1000;
   unsigned int OutputBytes = 0;
   char Output[OutputSize];
@@ -56,7 +55,7 @@ TEST_F(GdGemBaseTest, GetCalibrationCmd) {
 /// \todo This needs a little more work, better test data.
 TEST_F(GdGemBaseTest, DataReceive) {
   Settings.UpdateIntervalSec = 0;
-  GdGemBaseStandIn Readout(Settings, LocalSettings);
+  GdGemBaseStandIn Readout(Settings);
   Readout.startThreads();
   std::chrono::duration<std::int64_t, std::milli> SleepTime(400);
   std::this_thread::sleep_for(SleepTime);

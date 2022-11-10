@@ -9,6 +9,7 @@
 #include <sonde/SoNDeBase.h>
 #include <common/kafka/EV42Serializer.h>
 #include <common/monitor/HistogramSerializer.h>
+#include <common/kafka/KafkaConfig.h>
 #include <common/kafka/Producer.h>
 #include <common/RuntimeStat.h>
 #include <common/debug/Trace.h>
@@ -19,9 +20,8 @@
 // #undef TRC_LEVEL
 // #define TRC_LEVEL TRC_L_DEB
 
-SONDEIDEABase::SONDEIDEABase(BaseSettings const &settings, struct SoNDeSettings & localSettings)
-     : Detector("SoNDe detector using IDEAS readout", settings),
-       SoNDeSettings(localSettings) {
+SONDEIDEABase::SONDEIDEABase(BaseSettings const &settings)
+     : Detector("SoNDe detector using IDEAS readout", settings) {
 
   Stats.setPrefix(EFUSettings.GraphitePrefix, EFUSettings.GraphiteRegion);
 
@@ -106,9 +106,10 @@ void SONDEIDEABase::input_thread() {
 
 void SONDEIDEABase::processing_thread() {
   Sonde::Geometry geometry;
-  Sonde::IDEASData ideasdata(&geometry, SoNDeSettings.fileprefix);
+  Sonde::IDEASData ideasdata(&geometry, EFUSettings.DumpFilePrefix);
 
-  Producer eventprod(EFUSettings.KafkaBroker, "skadi_detector");
+  KafkaConfig KafkaCfg(EFUSettings.KafkaConfigFile);
+  Producer eventprod(EFUSettings.KafkaBroker, "skadi_detector", KafkaCfg.CfgParms);
   auto Produce = [&eventprod](auto DataBuffer, auto Timestamp) {
     eventprod.produce(DataBuffer, Timestamp);
   };
@@ -119,7 +120,7 @@ void SONDEIDEABase::processing_thread() {
   constexpr uint16_t maxAdc{65535};
   Hists histograms(maxChannels, maxAdc);
   HistogramSerializer histfb(histograms.needed_buffer_size(), "SONDE");
-  Producer monitorprod(EFUSettings.KafkaBroker, "SKADI_monitor");
+  Producer monitorprod(EFUSettings.KafkaBroker, "SKADI_monitor", KafkaCfg.CfgParms);
 
   auto ProduceHist = [&monitorprod](auto DataBuffer, auto Timestamp) {
     monitorprod.produce(DataBuffer, Timestamp);

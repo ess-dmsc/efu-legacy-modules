@@ -1,4 +1,6 @@
 
+include_directories(.)
+
 #=============================================================================
 # sonde detector module and base test
 #=============================================================================
@@ -7,8 +9,10 @@ set(sonde_common_inc SoNDeBase.h ideas/Data.h)
 set(sonde_common_src SoNDeBase.cpp ideas/Data.cpp)
 
 set(sonde_INC ${sonde_common_inc})
-set(sonde_SRC SoNDe.cpp ${sonde_common_src})
-create_module(sonde)
+set(sonde_SRC main.cpp ${sonde_common_src})
+set(sonde_LIB MonitorLib)
+create_executable(sonde)
+add_dependencies(sonde MonitorLib)
 
 #
 set(SoNDeBaseTest_INC
@@ -21,6 +25,8 @@ set(SoNDeBaseTest_SRC
   ${ESS_SOURCE_DIR}/common/testutils/TestUDPServer.cpp
 )
 create_test_executable(SoNDeBaseTest)
+
+
 
 #=============================================================================
 # unit tests

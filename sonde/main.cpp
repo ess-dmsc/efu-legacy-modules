@@ -2,16 +2,16 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Main entry for Multiblade
+/// \brief Main entry for SoNDe
 //===----------------------------------------------------------------------===//
 
 #include <efu/MainProg.h>
-#include <MBCaenBase.h>
+#include <SoNDeBase.h>
 
 int main(int argc, char * argv[]) {
-  MainProg Main("mbcaen", argc, argv);
+  MainProg Main("gdgem", argc, argv);
 
-  auto Detector = new Multiblade::CAENBase(Main.DetectorSettings);
+  auto Detector = new SONDEIDEABase(Main.DetectorSettings);
 
   return Main.run(Detector);
 }
