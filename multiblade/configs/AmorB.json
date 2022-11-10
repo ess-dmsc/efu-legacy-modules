@@ -19,9 +19,9 @@
   "MonitorCassette" : 0,
   "MonitorChannel" : 63,
 
-  "MaxGapWire"  : 32,
-  "MaxGapStrip" : 32,
-  "MaxValidADC" : 65535,
+  "MaxGapWire"  : 0,
+  "MaxGapStrip" : 0,
+  "MaxValidADC" : 65534,
 
   "TimeTickNS" : 16,
   "MaxTofNS" : 1100000000

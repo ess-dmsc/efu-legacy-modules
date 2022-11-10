@@ -253,6 +253,7 @@ void CAENBase::processing_thread() {
 
               if (Event.ClusterB.hits.size() > 1) {
                 Counters.EventsWireMultTwoPlus++;
+                continue;
               }
 
               if (Event.ClusterB.hits.size() == 1) {
@@ -286,7 +287,11 @@ void CAENBase::processing_thread() {
                 XTRACE(EVENT, DEB, "event: time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
                 Counters.TxBytes += events.addEvent(time, pixel_id);
                 Counters.Events++;
-                Counters.Events2D++;
+                if (MBCaen.ModuleSettings.Alignment) {
+                  Counters.Events2D++;
+                } else {
+                  Counters.Events1D++;
+                }
               }
             }
             MBCaen.builders[Cassette].Events.clear(); // else events will accumulate
