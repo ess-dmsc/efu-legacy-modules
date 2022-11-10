@@ -67,6 +67,11 @@ bool MBCaenInstrument::parseAndProcessPacket(char * data, int length,  EV42Seria
     return false;
   }
 
+  // if (parser.MBHeader->digitizerID != 31) {
+  //   printf("readout for non 31 discarded\n");
+  //   return false;
+  // }
+
   XTRACE(DATA, DEB, "Received %d readouts from digitizer %d",
          parser.MBHeader->numElements, parser.MBHeader->digitizerID);
 
