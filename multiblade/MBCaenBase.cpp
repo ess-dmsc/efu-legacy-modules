@@ -27,8 +27,8 @@
 #include <multiblade/MBCaenInstrument.h>
 #include <unistd.h>
 
-// #undef TRC_LEVEL
-// #define TRC_LEVEL TRC_L_DEB
+#undef TRC_LEVEL
+#define TRC_LEVEL TRC_L_DEB
 
 namespace Multiblade {
 
@@ -209,26 +209,26 @@ void CAENBase::processing_thread() {
         }
         MBCaen.MonitorHits.clear();
 
-        //when alignment mode is active, process 2D events with event builders
-        if(MBCaen.ModuleSettings.Alignment) {
+
+        if(true) {
           // Strips == X == ClusterA
           // Wires  == Y == ClusterB
           for (int Cassette = 0; Cassette <= MBCaen.amorgeom.Cassette2D; Cassette++) {
             for (const auto &Event : MBCaen.builders[Cassette].Events) {
-              
-              if (MBCaen.amorgeom.is1DDetector(Cassette)) {
+
+              if (MBCaen.ModuleSettings.Alignment && MBCaen.amorgeom.is1DDetector(Cassette)) {
                 Counters.Events1DDiscard++;
                 continue;
               }
 
               // 2D events must have coincidences for both planes, but not 1D
               // This is only relevant for alignment mode and for 2D detectors
-              if (not Event.both_planes()) {
+              if (MBCaen.ModuleSettings.Alignment && not Event.both_planes()) {
                 XTRACE(EVENT, INF, "No coincidence\n %s", Event.to_string({}, true).c_str());
                 Counters.EventsNoCoincidence++;
                 continue;
               }
-              
+
               // // Discard if there are gaps in the strip channels
               // if (Event.ClusterA.hits.size() < Event.ClusterA.coord_span()) {
               //   int StripGap = Event.ClusterA.coord_span() - Event.ClusterA.hits.size();
@@ -278,11 +278,12 @@ void CAENBase::processing_thread() {
               }
               auto pixel_id = MBCaen.essgeom.pixel2D(x, y);
               XTRACE(EVENT, DEB, "time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
-            
+
               if (pixel_id == 0) {
                 XTRACE(EVENT, DEB, "pixel error: time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
                 Counters.GeometryErrors++;
               } else {
+                XTRACE(EVENT, DEB, "event: time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
                 Counters.TxBytes += events.addEvent(time, pixel_id);
                 Counters.Events++;
                 Counters.Events2D++;
@@ -291,25 +292,25 @@ void CAENBase::processing_thread() {
             MBCaen.builders[Cassette].Events.clear(); // else events will accumulate
           }
         } // interate over builders
-        else { //when alignment mode isn't used, process 1D events directly per wire readout
-          XTRACE(EVENT, DEB, "processing 1D events");
-          // /// Attempt to use all 1D hits as events
-          for (Hit & h1d : MBCaen.Hits1D) {
-            uint16_t x{0};
-            uint16_t y = h1d.coordinate;
-            auto pixel_id = MBCaen.essgeom.pixel2D(x, y);
-            uint64_t time = h1d.time;
-            if (pixel_id == 0) {
-                XTRACE(EVENT, DEB, "pixel error: time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
-                Counters.GeometryErrors++;
-              } else {
-                Counters.TxBytes += events.addEvent(time, pixel_id);
-                Counters.Events++;
-                Counters.Events1D++;
-              }
-          }
-          MBCaen.Hits1D.clear();
-        }
+        // else { //when alignment mode isn't used, process 1D events directly per wire readout
+        //   XTRACE(EVENT, DEB, "processing 1D events");
+        //   // /// Attempt to use all 1D hits as events
+        //   for (Hit & h1d : MBCaen.Hits1D) {
+        //     uint16_t x{0};
+        //     uint16_t y = h1d.coordinate;
+        //     auto pixel_id = MBCaen.essgeom.pixel2D(x, y);
+        //     uint64_t time = h1d.time;
+        //     if (pixel_id == 0) {
+        //         XTRACE(EVENT, DEB, "pixel error: time: %u, x %u, y %u, pixel %u", time, x, y, pixel_id);
+        //         Counters.GeometryErrors++;
+        //       } else {
+        //         Counters.TxBytes += events.addEvent(time, pixel_id);
+        //         Counters.Events++;
+        //         Counters.Events1D++;
+        //       }
+        //   }
+        //   MBCaen.Hits1D.clear();
+        // }
       } else {
         // There is NO data in the FIFO - do stop checks and sleep a little
         Counters.ProcessingIdle++;
@@ -360,5 +361,3 @@ void CAENBase::processing_thread() {
     }
   }
 }
-
-
