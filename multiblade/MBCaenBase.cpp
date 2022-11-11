@@ -49,7 +49,6 @@ CAENBase::CAENBase(BaseSettings const &settings, struct CAENSettings &LocalMBCAE
 
   Stats.create("headers.packet_bad_header", Counters.PacketBadDigitizer);
   Stats.create("headers.error_version", Counters.ReadoutsErrorVersion);
-  Stats.create("headers.error_localtime", Counters.ReadoutsErrorLocalTime);
   Stats.create("headers.seq_errors", Counters.ReadoutsSeqErrors);
 
   Stats.create("readouts.count", Counters.ReadoutsCount);
@@ -65,6 +64,7 @@ CAENBase::CAENBase(BaseSettings const &settings, struct CAENSettings &LocalMBCAE
   Stats.create("readouts.large_tof", Counters.ReadoutsTOFLarge);
   Stats.create("readouts.timer_wraps", Counters.ReadoutsTimerWraps);
   Stats.create("readouts.error_bytes", Counters.ReadoutsErrorBytes);
+  Stats.create("readouts.error_localtime", Counters.ReadoutsErrorLocalTime);
 
   Stats.create("monitor.count", Counters.MonitorCount);
   Stats.create("monitor.txbytes", Counters.MonitorTxBytes);
