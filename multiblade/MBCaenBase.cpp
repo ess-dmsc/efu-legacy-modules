@@ -49,6 +49,7 @@ CAENBase::CAENBase(BaseSettings const &settings, struct CAENSettings &LocalMBCAE
 
   Stats.create("headers.packet_bad_header", Counters.PacketBadDigitizer);
   Stats.create("headers.error_version", Counters.ReadoutsErrorVersion);
+  Stats.create("headers.error_localtime", Counters.ReadoutsErrorLocalTime);
   Stats.create("headers.seq_errors", Counters.ReadoutsSeqErrors);
 
   Stats.create("readouts.count", Counters.ReadoutsCount);

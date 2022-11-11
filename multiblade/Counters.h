@@ -22,6 +22,7 @@ struct Counters {
     // Processing Counters - accessed in processing thread
     int64_t FifoSeqErrors;
     int64_t ReadoutsErrorVersion;
+    int64_t ReadoutsErrorLocalTime;
     int64_t ReadoutsSeqErrors;
     int64_t ReadoutsErrorBytes;
     int64_t PacketBadDigitizer;

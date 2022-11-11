@@ -61,6 +61,7 @@ bool MBCaenInstrument::parseAndProcessPacket(char * data, int length,  EV42Seria
 
   counters.ReadoutsErrorBytes += parser.Stats.error_bytes;
   counters.ReadoutsErrorVersion += parser.Stats.error_version;
+  counters.ReadoutsErrorLocalTime += parser.Stats.error_localtime;
   counters.ReadoutsSeqErrors += parser.Stats.seq_errors;
 
   if (res < 0) {
