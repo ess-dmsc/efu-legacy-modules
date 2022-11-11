@@ -61,7 +61,6 @@ CAENBase::CAENBase(BaseSettings const &settings, struct CAENSettings &LocalMBCAE
   Stats.create("readouts.invalid_ch", Counters.ReadoutsInvalidChannel);
   Stats.create("readouts.invalid_adc", Counters.ReadoutsInvalidAdc);
   Stats.create("readouts.invalid_plane", Counters.ReadoutsInvalidPlane);
-  Stats.create("readouts.large_tof", Counters.ReadoutsTOFLarge);
   Stats.create("readouts.timer_wraps", Counters.ReadoutsTimerWraps);
   Stats.create("readouts.error_bytes", Counters.ReadoutsErrorBytes);
   Stats.create("readouts.error_localtime", Counters.ReadoutsErrorLocalTime);

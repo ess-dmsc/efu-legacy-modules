@@ -77,10 +77,6 @@ int DataParser::parse(const char *buffer, unsigned int size) {
     r.local_time = d.localTime;
     r.channel = d.channel;
     r.adc = d.adcValue;
-    if (r.local_time > MaxJadaqLocalTime) {
-      XTRACE(DATA, ALW, "large local_time %u", r.local_time);
-      Stats.error_localtime++;
-    }
     //XTRACE(DATA, DEB, "readout %s", r.to_string().c_str());
   }
 

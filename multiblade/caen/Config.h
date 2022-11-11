@@ -64,6 +64,7 @@ public:
   int MaxGapWire{0};
   int MaxGapStrip{1};
   uint32_t MaxTofNS{1'000'000'000}; // 1s
+  uint32_t MaxJadaqLocalTime{7'500'000}; // timer ticks
 
 private:
   /// \brief helper function to load and parse json file

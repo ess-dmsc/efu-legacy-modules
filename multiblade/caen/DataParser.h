@@ -49,7 +49,6 @@ public:
   struct Stats {
     uint64_t error_version{0};
     uint64_t error_bytes{0};
-    uint64_t error_localtime{0};
     uint64_t seq_errors{0};
   } Stats;
 
@@ -60,7 +59,6 @@ public:
   struct ListElement422 *Data{nullptr};
 
   uint32_t ExpectedSeqNum{0};
-  uint32_t MaxJadaqLocalTime{7'500'000}; // timer ticks
 };
 
 }

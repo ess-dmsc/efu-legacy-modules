@@ -61,7 +61,6 @@ bool MBCaenInstrument::parseAndProcessPacket(char * data, int length,  EV42Seria
 
   counters.ReadoutsErrorBytes += parser.Stats.error_bytes;
   counters.ReadoutsErrorVersion += parser.Stats.error_version;
-  counters.ReadoutsErrorLocalTime += parser.Stats.error_localtime;
   counters.ReadoutsSeqErrors += parser.Stats.seq_errors;
 
   if (res < 0) {
@@ -132,6 +131,12 @@ void MBCaenInstrument::FixJumpsAndSort(int DigitiserIndex, std::vector<Readout> 
   for (auto &Readout : vec) {
     int64_t Time = (uint64_t)(Readout.local_time * config.TimeTickNS);
 
+    if (Readout.local_time > config.MaxJadaqLocalTime) {
+      XTRACE(DATA, ALW, "large local_time %u", Readout.local_time);
+      counters.ReadoutsErrorLocalTime++;
+      continue;
+    }
+
     if ((PrevTime - Time) < Gap) {
       temp.push_back(Readout);
     } else {
@@ -158,10 +163,6 @@ void MBCaenInstrument::LoadAndProcessReadouts(int DigitiserIndex, std::vector<Re
     XTRACE(DATA, DEB, "time %u, channel %u, adc %u",
            dp.local_time, dp.channel, dp.adc);
 
-    if (dp.local_time * config.TimeTickNS >= 0xffffffffULL) {
-      counters.ReadoutsTOFLarge++;
-      continue;
-    }
     uint64_t Time = (uint64_t)(dp.local_time * config.TimeTickNS);
 
     if (amorgeom.isMonitor(Cassette, dp.channel)) {
