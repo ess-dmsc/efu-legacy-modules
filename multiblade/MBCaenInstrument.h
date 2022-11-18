@@ -61,10 +61,7 @@ void handleDetectorReadout(int Cassette, Readout & dp, uint64_t Time);
 void handleMonitorReadout(uint64_t Time);
 
 /// \breif separate ingestion of 1D and 2D readouts
-void accept2DReadout(int Cassette, uint64_t Time, uint8_t Plane, uint16_t Channel, uint16_t Adc);
-
-/// \breif separate ingestion of 1D and 2D readouts
-void accept1DReadout(int Cassette, uint64_t Time, uint8_t Plane, uint16_t Channel, uint16_t Adc);
+void acceptReadout(int Cassette, uint64_t Time, uint8_t Plane, uint16_t Channel, uint16_t Adc);
 
 public:
   /// \brief Stuff that 'ties' Multiblade together

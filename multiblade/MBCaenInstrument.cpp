@@ -202,12 +202,16 @@ void MBCaenInstrument::handleDetectorReadout(int Cassette, Readout & dp, uint64_
 
   uint8_t plane = amorgeom.getPlane(Cassette, dp.channel);
 
-  accept2DReadout(Cassette, Time, plane, dp.channel, dp.adc);
+  acceptReadout(Cassette, Time, plane, dp.channel, dp.adc);
 
 }
 
-void MBCaenInstrument::accept2DReadout(int Cassette, uint64_t Time, uint8_t Plane, uint16_t Channel, uint16_t Adc) {
+void MBCaenInstrument::acceptReadout(int Cassette, uint64_t Time, uint8_t Plane, uint16_t Channel, uint16_t Adc) {
   if (Plane == 0) {
+    if (not ModuleSettings.Alignment){
+      counters.ReadoutsDiscardStrips++;
+      return;
+    }
     int coord = amorgeom.getXCoord(Cassette, Channel);
     builders[Cassette].insert({Time, (uint16_t)coord, Adc, Plane});
     if (ModuleSettings.Alignment) {
@@ -223,25 +227,6 @@ void MBCaenInstrument::accept2DReadout(int Cassette, uint64_t Time, uint8_t Plan
     } else {
       counters.Readouts1DY++;
     }
-    counters.ReadoutsGood++;
-    return;
-  }
-  // fallthrough
-  counters.ReadoutsInvalidPlane++;
-  return;
-}
-
-
-/// \brief discard x channels and adds each y readout to Hits1D vector
-void MBCaenInstrument::accept1DReadout(int Cassette, uint64_t Time, uint8_t Plane, uint16_t Channel, uint16_t Adc) {
-  if (Plane == 0) { // Plane 0 is strips readout and is invalid for 1D events
-    counters.ReadoutsDiscardStrips++;
-    return;
-  }
-  if (Plane == 1) {
-    int coord = amorgeom.getYCoord(Cassette, Channel);
-    Hits1D.push_back({Time, (uint16_t)coord, Adc, Plane});
-    counters.Readouts1DY++;
     counters.ReadoutsGood++;
     return;
   }
