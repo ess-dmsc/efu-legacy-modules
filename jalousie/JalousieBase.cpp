@@ -34,7 +34,7 @@ const char *classname = "Jalousie detector";
 
 
 JalousieBase::JalousieBase(BaseSettings const &settings)
-    : Detector("JALOUSIE", settings) {
+    : Detector(settings) {
 
   Stats.setPrefix(EFUSettings.GraphitePrefix, EFUSettings.GraphiteRegion);
 

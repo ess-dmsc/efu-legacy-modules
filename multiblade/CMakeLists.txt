@@ -45,13 +45,9 @@ add_dependencies(mbcaen efu_reduction)
 #
 set(MBCAENBaseTest_INC
   ${caen_common_inc}
-  ${ESS_SOURCE_DIR}/common/testutils/SaveBuffer.h
-  ${ESS_SOURCE_DIR}/common/testutils/TestUDPServer.h
 )
 set(MBCAENBaseTest_SRC
   MBCaenBaseTest.cpp
-  ${ESS_SOURCE_DIR}/common/testutils/SaveBuffer.cpp
   ${caen_common_src}
-  ${ESS_SOURCE_DIR}/common/testutils/TestUDPServer.cpp
 )
 create_test_executable(MBCAENBaseTest)

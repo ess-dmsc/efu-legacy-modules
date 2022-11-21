@@ -36,7 +36,7 @@ namespace Multiblade {
 const char *classname = "Multiblade detector with CAEN readout";
 
 CAENBase::CAENBase(BaseSettings const &settings)
-    : Detector("MBCAEN", settings) {
+    : Detector(settings) {
 
   Stats.setPrefix(EFUSettings.GraphitePrefix, EFUSettings.GraphiteRegion);
 

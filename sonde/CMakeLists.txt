@@ -17,12 +17,10 @@ add_dependencies(sonde MonitorLib)
 #
 set(SoNDeBaseTest_INC
   ${sonde_common_inc}
-  ${ESS_SOURCE_DIR}/common/testutils/TestUDPServer.h
 )
 set(SoNDeBaseTest_SRC
   SoNDeBaseTest.cpp
   ${sonde_common_src}
-  ${ESS_SOURCE_DIR}/common/testutils/TestUDPServer.cpp
 )
 create_test_executable(SoNDeBaseTest)
 

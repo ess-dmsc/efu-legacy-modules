@@ -24,7 +24,7 @@ set(pipeline_common_inc
   srs/ParserVMM3.h
   srs/BuilderVMM3.h
   srs/CalibrationFile.h # also works for VMM2
-  ${ESS_MODULE_DIR}/multigrid/reduction/ModuleGeometry.h
+  ${ESS_COMMON_DIR}/reduction/multigrid/ModuleGeometry.h
   generators/BuilderReadouts.h
   generators/BuilderHits.h
   )
@@ -37,7 +37,7 @@ set(pipeline_common_src
   srs/ParserVMM3.cpp
   srs/BuilderVMM3.cpp
   srs/CalibrationFile.cpp  # Also works for VMM2
-  ${ESS_MODULE_DIR}/multigrid/reduction/ModuleGeometry.cpp
+  ${ESS_COMMON_DIR}/reduction/multigrid/ModuleGeometry.cpp
   generators/BuilderReadouts.cpp
   generators/BuilderHits.cpp
   )
@@ -59,7 +59,6 @@ set(GdGemBaseTest_INC
 set(GdGemBaseTest_SRC
   GdGemBaseTest.cpp
   ${pipeline_common_src}
-  ${ESS_SOURCE_DIR}/common/testutils/TestUDPServer.cpp
   )
 create_test_executable(GdGemBaseTest)
 target_compile_definitions(GdGemBaseTest
@@ -74,16 +73,17 @@ set(GdGEMConfigTest_INC
   srs/SRSTime.h
   srs/SRSMappings.h
   srs/CalibrationFile.cpp
-  ${ESS_MODULE_DIR}/multigrid/reduction/ModuleGeometry.cpp
+  ${ESS_COMMON_DIR}/reduction/multigrid/ModuleGeometry.h
   )
 set(GdGEMConfigTest_SRC
-  NMXConfigTest.cpp
+  GdGemConfigTest.cpp
   NMXConfig.cpp
   srs/SRSTime.cpp
   srs/SRSMappings.cpp
   srs/CalibrationFile.cpp
-  ${ESS_MODULE_DIR}/multigrid/reduction/ModuleGeometry.h
+  ${ESS_COMMON_DIR}/reduction/multigrid/ModuleGeometry.cpp
   )
+set(GdGEMConfigTest_LIB efu_reduction)
 create_test_executable(GdGEMConfigTest)
 target_compile_definitions(GdGEMConfigTest
   PRIVATE TEST_JSON_PATH="${CMAKE_CURRENT_SOURCE_DIR}/${TEST_JSON_PATH}/")

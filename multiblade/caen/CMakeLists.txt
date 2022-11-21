@@ -46,7 +46,7 @@ set(MBConfigTest_INC
 set(MBConfigTest_SRC
   Config.cpp
   ConfigTest.cpp
-  ${ESS_SOURCE_DIR}/common/testutils/SaveBuffer.cpp)
+  )
 create_test_executable(MBConfigTest)
 
 #

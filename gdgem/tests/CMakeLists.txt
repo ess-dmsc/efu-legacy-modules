@@ -27,7 +27,7 @@ set(ClusteringBase_INC
   ../srs/SRSTime.h
   ../srs/SRSMappings.h
   ../srs/CalibrationFile.h
-  ${ESS_MODULE_DIR}/multigrid/reduction/ModuleGeometry.h
+  ${ESS_COMMON_DIR}/reduction/multigrid/ModuleGeometry.h
   )
 
 if(EXISTS ${TEST_DATA_PATH})

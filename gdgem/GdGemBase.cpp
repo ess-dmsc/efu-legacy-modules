@@ -63,7 +63,7 @@ int GdGemBase::getCalibration(std::vector<std::string> CmdArgs,
 }
 
 GdGemBase::GdGemBase(BaseSettings const &Settings) :
-       Detector("NMX", Settings) {
+       Detector(Settings) {
 
   Stats.setPrefix(EFUSettings.GraphitePrefix, EFUSettings.GraphiteRegion);
 

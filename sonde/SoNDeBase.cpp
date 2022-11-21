@@ -21,7 +21,7 @@
 // #define TRC_LEVEL TRC_L_DEB
 
 SONDEIDEABase::SONDEIDEABase(BaseSettings const &settings)
-     : Detector("SoNDe detector using IDEAS readout", settings) {
+     : Detector(settings) {
 
   Stats.setPrefix(EFUSettings.GraphitePrefix, EFUSettings.GraphiteRegion);
 
